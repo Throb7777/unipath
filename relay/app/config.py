@@ -179,7 +179,7 @@ def load_bootstrap_settings() -> BootstrapSettings:
         host=os.getenv("HOST", "0.0.0.0"),
         port=int(os.getenv("PORT", "8080")),
         auth_token=os.getenv("AUTH_TOKEN", "").strip(),
-        service_name=os.getenv("SERVICE_NAME", "Open Relay").strip() or "Open Relay",
+        service_name=os.getenv("SERVICE_NAME", "UniPATH Forwarding Service").strip() or "UniPATH Forwarding Service",
         service_version=os.getenv("SERVICE_VERSION", "0.1.0").strip() or "0.1.0",
         workspace_dir=workspace_dir,
         data_dir=data_dir,

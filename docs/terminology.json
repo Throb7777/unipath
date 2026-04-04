@@ -14,6 +14,8 @@
     }
   },
   "terms": {
+    "app.project": { "internal": "unipath", "display": { "en": "UniPATH", "zh-CN": "UniPATH" } },
+    "app.project_full": { "internal": "unipath_full", "display": { "en": "Unified Phone Action Task Hub", "zh-CN": "统一手机动作任务中心" } },
     "app.relay": { "internal": "relay", "display": { "en": "Forwarding Service", "zh-CN": "转发服务" } },
     "task.task": { "internal": "task", "display": { "en": "Task", "zh-CN": "任务" } },
     "task.task_id": { "internal": "task_id", "display": { "en": "Task ID", "zh-CN": "任务编号" } },

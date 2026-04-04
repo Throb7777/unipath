@@ -29,6 +29,7 @@ Android/.gradle-user-home-codex/
 Android/app/build/
 Android/build/
 Android/*.iml
+.gradle-local/
 
 # Build outputs
 *.apk

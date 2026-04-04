@@ -24,7 +24,7 @@
             android:layout_weight="1"
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:textColor="@color/text_primary"
-            tools:text="Article Forwarder" />
+            tools:text="UniPATH" />
 
         <Button
             android:id="@+id/settingsButton"

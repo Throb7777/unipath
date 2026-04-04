@@ -1,6 +1,6 @@
-# Android App
+# UniPATH Android
 
-> The Android app receives shared links, submits them to the local Forwarding Service, and shows task status back to the user.
+> The Android app for UniPATH. It receives shared links, submits them to the local Forwarding Service, and shows task status back to the user.
 
 ## 🌟 What This App Does
 

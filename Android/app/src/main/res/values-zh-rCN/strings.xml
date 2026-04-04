@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">文章转发助手</string>
+    <string name="app_name">UniPATH</string>
 
-    <string name="topbar_home">文章转发助手</string>
+    <string name="topbar_home">UniPATH</string>
     <string name="topbar_share">确认转发</string>
     <string name="topbar_status">转发状态</string>
     <string name="topbar_flow">完整流程</string>

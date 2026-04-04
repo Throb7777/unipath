@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Article Forwarder</string>
+    <string name="app_name">UniPATH</string>
 
-    <string name="topbar_home">Article Forwarder</string>
+    <string name="topbar_home">UniPATH</string>
     <string name="topbar_share">Confirm Forward</string>
     <string name="topbar_status">Forward Status</string>
     <string name="topbar_flow">Full Flow</string>

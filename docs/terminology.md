@@ -15,6 +15,8 @@ This file defines the primary display terms for the project. Use these terms in 
 
 | Internal | English | 简体中文 | Notes |
 | --- | --- | --- | --- |
+| unipath | UniPATH | UniPATH | Main project name. |
+| unipath_full | Unified Phone Action Task Hub | 统一手机动作任务中心 | Full project expansion used in formal introductions. |
 | relay | Forwarding Service | 转发服务 | Main user-facing name for relay. |
 | task | Task | 任务 | |
 | task_id | Task ID | 任务编号 | |

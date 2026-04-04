@@ -1,6 +1,6 @@
-# Relay
+# UniPATH Forwarding Service
 
-> The local Forwarding Service used by the Android app. It receives tasks, runs a Processing Method, stores task status, and provides a Web UI and diagnostics.
+> The local Forwarding Service used by UniPATH. It receives tasks, runs a Processing Method, stores task status, and provides a Web UI and diagnostics.
 
 ## 🌟 What Relay Does
 

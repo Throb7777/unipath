@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('settings.title') }}</h2>
+      <p>{{ t('settings.body') }}</p>
+    </div>
+  </div>
+  {% if saved %}<p class="banner ok">{{ t('settings.saved') }}</p>{% endif %}
+  {% if error %}<p class="banner error">{{ error }}</p>{% endif %}
+  {% if test_result %}
+  <div class="banner {{ 'ok' if test_result.executorHealth.available else 'error' }}">
+    <strong>{{ t('settings.executor_test') }}:</strong> {{ test_result.executorHealth.label }} -
+    {{ t('settings.available') if test_result.executorHealth.available else t('settings.unavailable') }}.
+    {{ test_result.executorHealth.message }}
+  </div>
+  {% endif %}
+
+  <div class="settings-overview">
+    <div class="grid two compact settings-meta-grid">
+      <div class="stat">
+        <span>{{ t('settings.config_source') }}</span>
+        <strong class="path-value path-value-soft">{{ runtime_metadata.runtimeConfigPath }}</strong>
+      </div>
+      <div class="stat">
+        <span>{{ t('settings.config_version') }}</span>
+        <strong>v{{ runtime_payload.configVersion }}</strong>
+      </div>
+    </div>
+    <ul class="meta-list subtle settings-meta-note">
+      <li><strong>{{ t('settings.source_split') }}:</strong> {{ t('settings.source_split_body') }}</li>
+      <li><strong>{{ t('settings.apply_scope') }}:</strong> {{ t('settings.apply_scope_body') }}</li>
+      <li><strong>{{ t('settings.restart_required') }}:</strong> {{ runtime_metadata.applyScope.restartRequiredFields | join(", ") or t('settings.none') }}</li>
+    </ul>
+  </div>
+
+  <form method="post" action="{{ page_url('/ui/settings') }}" class="stack settings-stack">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <fieldset class="group">
+      <legend>{{ t('settings.basic') }}</legend>
+      <div class="group-heading">
+        <strong>{{ t('settings.task_defaults') }}</strong>
+        <p>{{ t('settings.task_defaults_body') }}</p>
+      </div>
+
+      <div class="grid two settings-mode-grid">
+        <div class="field">
+          <label for="default_mode">{{ t('settings.default_mode') }}</label>
+          <select id="default_mode" name="default_mode">
+            {% for mode in modes %}
+            <option value="{{ mode.id }}" {% if runtime_config.default_mode == mode.id %}selected{% endif %}>{{ mode.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="executor-option-grid">
+        {% for executor in executors %}
+        <label class="executor-option {{ 'active' if runtime_config.executor_kind == executor.executorId else '' }}">
+          <input
+            type="radio"
+            name="executor_kind"
+            value="{{ executor.executorId }}"
+            {% if runtime_config.executor_kind == executor.executorId %}checked{% endif %}
+            data-executor-select-radio>
+          <span class="executor-option-head">
+            <strong>{{ executor.label }}</strong>
+            <span class="pill {{ 'ok' if executor_healths[loop.index0].available else 'warn' }}">
+              {{ t('settings.ready') if executor_healths[loop.index0].available else t('settings.needs_setup') }}
+            </span>
+          </span>
+          <span class="executor-option-copy">
+            {% if executor.executorId == "openclaw" %}
+            {{ t('settings.openclaw_copy') }}
+            {% elif executor.executorId == "shell_command" %}
+            {{ t('settings.shell_copy') }}
+            {% else %}
+            {{ t('settings.mock_copy') }}
+            {% endif %}
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <select id="executor_kind_select" name="executor_kind" data-executor-select class="settings-hidden-select" aria-hidden="true" tabindex="-1">
+        {% for executor in executors %}
+        <option value="{{ executor.executorId }}" {% if runtime_config.executor_kind == executor.executorId %}selected{% endif %}>{{ executor.label }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="inline-note">
+        {% for health in executor_healths %}
+        <div class="pill {{ 'ok' if health.available else 'warn' }}">
+          {{ health.label }}: {{ t('settings.ready') if health.available else t('settings.needs_setup') }}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="executor-guide" data-executor-hint="openclaw">
+        <strong>{{ t('settings.executor_hint.openclaw.title') }}</strong>
+        <p>{{ t('settings.executor_hint.openclaw.body') }}</p>
+      </div>
+      <div class="executor-guide" data-executor-hint="shell_command">
+        <strong>{{ t('settings.executor_hint.shell_command.title') }}</strong>
+        <p>{{ t('settings.executor_hint.shell_command.body') }}</p>
+      </div>
+      <div class="executor-guide" data-executor-hint="mock">
+        <strong>{{ t('settings.executor_hint.mock.title') }}</strong>
+        <p>{{ t('settings.executor_hint.mock.body') }}</p>
+      </div>
+    </fieldset>
+
+    <fieldset class="group" data-executor-group="openclaw">
+      <legend>OpenClaw</legend>
+      <div class="group-heading">
+        <strong>{{ t('settings.openclaw_group') }}</strong>
+        <p>{{ t('settings.openclaw_group_body') }}</p>
+      </div>
+      <div class="grid two">
+        <div class="field"><label>{{ t('settings.openclaw.command') }}<input name="openclaw_command" value="{{ runtime_config.openclaw.command }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.target_mode') }}<input name="openclaw_target_mode" value="{{ runtime_config.openclaw.target_mode }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.agent_id') }}<input name="openclaw_agent_id" value="{{ runtime_config.openclaw.agent_id }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.session_id') }}<input name="openclaw_session_id" value="{{ runtime_config.openclaw.session_id }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.to') }}<input name="openclaw_to" value="{{ runtime_config.openclaw.to }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.channel') }}<input name="openclaw_channel" value="{{ runtime_config.openclaw.channel }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.thinking') }}<input name="openclaw_thinking" value="{{ runtime_config.openclaw.thinking }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.browser_profile') }}<input name="openclaw_browser_profile" value="{{ runtime_config.openclaw.browser_profile }}"></label></div>
+        <div class="field"><label>{{ t('settings.openclaw.timeout_seconds') }}<input name="openclaw_timeout_seconds" type="number" value="{{ runtime_config.openclaw.timeout_seconds }}"></label></div>
+      </div>
+      <label class="check"><input type="checkbox" name="openclaw_local" {% if runtime_config.openclaw.local %}checked{% endif %}> {{ t('settings.openclaw.local') }}</label>
+      <label class="check"><input type="checkbox" name="openclaw_json_output" {% if runtime_config.openclaw.json_output %}checked{% endif %}> {{ t('settings.openclaw.json_output') }}</label>
+      <label class="check"><input type="checkbox" name="openclaw_wechat_use_browser" {% if runtime_config.openclaw.wechat_use_browser %}checked{% endif %}> {{ t('settings.openclaw.wechat_browser') }}</label>
+      <details class="advanced-box">
+        <summary>{{ t('settings.openclaw.advanced') }}</summary>
+        <div class="grid two">
+          <div class="field"><label>{{ t('settings.openclaw.network_retries') }}<input name="openclaw_network_retry_attempts" type="number" value="{{ runtime_config.openclaw.network_retry_attempts }}"></label></div>
+          <div class="field"><label>{{ t('settings.openclaw.network_retry_base') }}<input name="openclaw_network_retry_base_seconds" type="number" value="{{ runtime_config.openclaw.network_retry_base_seconds }}"></label></div>
+          <div class="field"><label>{{ t('settings.openclaw.session_lock_retries') }}<input name="openclaw_session_lock_retry_attempts" type="number" value="{{ runtime_config.openclaw.session_lock_retry_attempts }}"></label></div>
+          <div class="field"><label>{{ t('settings.openclaw.session_lock_base') }}<input name="openclaw_session_lock_retry_base_seconds" type="number" value="{{ runtime_config.openclaw.session_lock_retry_base_seconds }}"></label></div>
+          <div class="field"><label>{{ t('settings.openclaw.session_defer_cycles') }}<input name="openclaw_session_lock_defer_cycles" type="number" value="{{ runtime_config.openclaw.session_lock_defer_cycles }}"></label></div>
+          <div class="field"><label>{{ t('settings.openclaw.session_defer_seconds') }}<input name="openclaw_session_lock_defer_seconds" type="number" value="{{ runtime_config.openclaw.session_lock_defer_seconds }}"></label></div>
+        </div>
+      </details>
+    </fieldset>
+
+    <fieldset class="group" data-executor-group="shell_command">
+      <legend>Shell command</legend>
+      <div class="group-heading">
+        <strong>{{ t('settings.shell_group') }}</strong>
+        <p>{{ t('settings.shell_group_body') }}</p>
+      </div>
+      <div class="field">
+        <label>{{ t('settings.shell.template') }}
+          <textarea name="shell_command_template" rows="4">{{ runtime_config.shell_command.template }}</textarea>
+        </label>
+      </div>
+      <div class="field">
+        <label>{{ t('settings.shell.timeout_seconds') }}
+          <input name="shell_command_timeout_seconds" type="number" value="{{ runtime_config.shell_command.timeout_seconds }}">
+        </label>
+      </div>
+      <details class="advanced-box">
+        <summary>{{ t('settings.shell.advanced') }}</summary>
+        <p class="inline-help">{{ t('settings.shell.advanced_body') }}</p>
+      </details>
+    </fieldset>
+
+    <div class="settings-actions-bar">
+      <div class="actions-note">
+        <strong>{{ t('settings.apply_title') }}</strong>
+        <p>{{ t('settings.apply_body') }}</p>
+      </div>
+      <div class="actions">
+        <button type="submit" name="_action" value="test" class="secondary">{{ t('settings.test_executor') }}</button>
+        <button type="submit" name="_action" value="save_test" class="secondary">{{ t('settings.save_and_test') }}</button>
+        <button type="submit" name="_action" value="save">{{ t('settings.save_settings') }}</button>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

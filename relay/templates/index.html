@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="hero-panel">
+  <div class="hero-copy">
+    <span class="eyebrow">{{ t('overview.eyebrow') }}</span>
+    <h2>{{ t('overview.ready_title') if health.executorAvailable else t('overview.warning_title') }}</h2>
+    <p>
+      {{ t('overview.ready_body') if health.executorAvailable else t('overview.warning_body') }}
+    </p>
+    <div class="hero-actions">
+      <a href="{{ page_url('/ui/settings') }}" class="button-link">{{ t('overview.open_settings') }}</a>
+      <a href="{{ page_url('/ui/tasks') }}" class="button-link secondary-link">{{ t('overview.view_tasks') }}</a>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <span>{{ t('overview.status') }}</span>
+      <strong>{{ health.status }}</strong>
+    </div>
+    <div class="hero-stat">
+      <span>{{ t('overview.executor') }}</span>
+      <strong>{{ health.configuredExecutor }}</strong>
+    </div>
+    <div class="hero-stat">
+      <span>{{ t('overview.default_mode') }}</span>
+      <strong>{{ health.defaultMode }}</strong>
+    </div>
+    <div class="hero-stat">
+      <span>{{ t('overview.config_file') }}</span>
+      <strong class="path-value path-value-soft">{{ health.runtimeConfigPath }}</strong>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('quick.title') }}</h2>
+      <p>{{ t('quick.body') }}</p>
+    </div>
+  </div>
+  <div class="grid two">
+    <div class="quick-card">
+      <span>{{ t('quick.web_ui') }}</span>
+      <strong>{{ connection_hints.local }}/ui</strong>
+      <p>{{ t('quick.web_ui_body') }}</p>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.local }}/ui">{{ t('quick.copy_ui') }}</button>
+    </div>
+    <div class="quick-card">
+      <span>{{ t('quick.android_emulator') }}</span>
+      <strong>{{ connection_hints.android_emulator }}</strong>
+      <p>{{ t('quick.android_emulator_body') }}</p>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.android_emulator }}">{{ t('quick.copy_emulator') }}</button>
+    </div>
+    <div class="quick-card">
+      <span>{{ t('quick.current_bind') }}</span>
+      <strong>{{ connection_hints.bind }}</strong>
+      <p>{{ t('quick.current_bind_body') }}</p>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.bind }}">{{ t('quick.copy_bind') }}</button>
+    </div>
+    <div class="quick-card">
+      <span>{{ t('quick.diagnostics') }}</span>
+      <strong>/ui/diagnostics</strong>
+      <p>{{ t('quick.diagnostics_body') }}</p>
+      <a href="{{ page_url('/ui/diagnostics') }}" class="button-link secondary-link compact-link">{{ t('quick.open_diagnostics') }}</a>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('connection.title') }}</h2>
+      <p>{{ t('connection.body') }}</p>
+    </div>
+  </div>
+  <ul class="meta-list">
+    <li><strong>{{ t('connection.local') }}:</strong> {{ connection_hints.local }}</li>
+    <li><strong>{{ t('connection.emulator') }}:</strong> {{ connection_hints.android_emulator }}</li>
+    <li><strong>{{ t('connection.bind') }}:</strong> {{ connection_hints.bind }}</li>
+  </ul>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('recent.title') }}</h2>
+      <p>{{ t('recent.body') }}</p>
+    </div>
+    <a href="{{ page_url('/ui/tasks') }}" class="button-link secondary-link compact-link">{{ t('recent.open_full_list') }}</a>
+  </div>
+  {% if recent_tasks %}
+  <div class="task-card-list">
+    {% for task in recent_tasks %}
+    <a href="{{ page_url('/ui/tasks/' ~ task.task_id) }}" class="task-card">
+      <div class="task-card-top">
+        <div class="task-chip-row">
+          <span class="chip {{ task.status_tone }}">{{ task.stage_label }}</span>
+          <span class="chip neutral">{{ task.source_label }}</span>
+          <span class="chip neutral">{{ task.executor_kind or t('core.label') }}</span>
+        </div>
+        <span class="task-meta">{{ task.duration }}</span>
+      </div>
+      <h3>{{ task.target }}</h3>
+      <p>{{ task.summary }}</p>
+      <div class="task-card-bottom">
+        <span>{{ task.task_id }}</span>
+        <span>{{ task.updated_at }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <strong>{{ t('recent.empty_title') }}</strong>
+    <p>{{ t('recent.empty_body') }}</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

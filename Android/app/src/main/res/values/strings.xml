@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Article Forwarder</string>
+
+    <string name="topbar_home">Article Forwarder</string>
+    <string name="topbar_share">Confirm Forward</string>
+    <string name="topbar_status">Forward Status</string>
+    <string name="topbar_flow">Full Flow</string>
+    <string name="topbar_settings">Settings</string>
+    <string name="settings_service_section_title">Forwarding Service</string>
+    <string name="settings_service_section_hint">Set the service address, test the connection, and choose a mode.</string>
+    <string name="settings_app_section_title">App Settings</string>
+    <string name="settings_app_section_hint">Adjust app-only preferences here.</string>
+    <string name="action_back">Back</string>
+    <string name="settings_entry">Settings</string>
+
+    <string name="main_summary">Receive a shared link and send it to the forwarding service.</string>
+    <string name="main_relay_label">Forwarding Service</string>
+    <string name="main_mode_label">Current Mode</string>
+    <string name="main_recent_label">Recent Tasks</string>
+    <string name="main_recent_hint">Only the latest 20 tasks are kept.</string>
+    <string name="main_no_tasks_hint">Share an article here and recent tasks will appear.</string>
+    <string name="recent_target_unknown">Unknown Link</string>
+    <string name="recent_status_received">Received</string>
+    <string name="recent_status_processing">Processing</string>
+    <string name="recent_status_cancelling">Cancelling</string>
+    <string name="recent_status_completed">Completed</string>
+    <string name="recent_status_failed">Failed</string>
+    <string name="recent_status_cancelled">Cancelled</string>
+    <string name="recent_service_completed">Task completed.</string>
+    <string name="recent_service_failed">Task failed.</string>
+    <string name="recent_service_cancelled">Task cancelled.</string>
+    <string name="recent_service_received">Task received.</string>
+    <string name="recent_service_processing">Task is still processing.</string>
+
+    <string name="share_source_label">Source</string>
+    <string name="share_service_label">Forwarding Service</string>
+    <string name="share_normalized_label">Prepared Link</string>
+    <string name="share_raw_label">Shared Text</string>
+    <string name="share_instruction_label">Current Mode</string>
+    <string name="instruction_summary">The task will be sent with the current forwarding rule.</string>
+
+    <string name="action_cancel">Cancel</string>
+    <string name="action_submit">Send</string>
+    <string name="action_copy_result">Copy Result</string>
+    <string name="action_home">Back Home</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_cancel_task">Cancel Task</string>
+    <string name="action_view_full_flow">View Full Flow</string>
+
+    <string name="status_detail_label">Response</string>
+    <string name="status_task_label">Task ID</string>
+    <string name="status_timeline_label">Process Steps</string>
+    <string name="status_next_steps_label">Follow-up Suggestions</string>
+    <string name="status_duration_placeholder">-</string>
+    <string name="status_timeline_placeholder">No steps yet.</string>
+    <string name="status_missing_work_id">Missing task ID. The status cannot be shown.</string>
+    <string name="status_page_note">This page keeps syncing the latest task status from the forwarding service.</string>
+    <string name="task_id_placeholder">Not Available</string>
+    <string name="copy_done">Copied.</string>
+    <string name="copy_diagnostic_done">Diagnostic summary copied.</string>
+
+    <string name="stage_received">Share Received</string>
+    <string name="stage_normalized">Link Prepared</string>
+    <string name="stage_submitting">Sending to Service</string>
+    <string name="stage_accepted">Service Accepted</string>
+    <string name="stage_running">Forwarding Service Processing</string>
+    <string name="stage_completed">Forwarding Service Completed</string>
+    <string name="stage_failed">Forwarding Service Failed</string>
+    <string name="stage_manual_verification">Waiting for Manual Verification</string>
+    <string name="stage_cancelling">Cancelling</string>
+
+    <string name="settings_service_label">Forwarding Service Address</string>
+    <string name="settings_service_placeholder">http://192.168.1.12:8080</string>
+    <string name="settings_service_hint">Use the service base URL, for example http://192.168.1.12:8080 .</string>
+    <string name="settings_status_label">Connection Status</string>
+    <string name="settings_mode_label">Available Modes</string>
+    <string name="settings_mode_hint">Test the connection first, then choose a default mode.</string>
+    <string name="settings_test">Test Connection</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_reset">Use Defaults</string>
+    <string name="settings_loading">Loading configuration from the forwarding service…</string>
+    <string name="settings_no_modes">No modes are available yet.</string>
+    <string name="settings_fetch_required">Test the connection first to fetch the mode list.</string>
+    <string name="settings_invalid_url">The forwarding service address is invalid. Use an http or https URL.</string>
+    <string name="settings_save_done">Settings saved.</string>
+    <string name="settings_reset_done">Default settings restored.</string>
+    <string name="settings_fetch_failed">Failed to fetch the mode list.</string>
+    <string name="settings_service_ready">Connection is ready and the mode list has been loaded.</string>
+    <string name="settings_language_label">App Language</string>
+    <string name="settings_language_hint">Choose the language used in the app. Tap Save to apply it.</string>
+    <string name="language_english">English</string>
+    <string name="language_simplified_chinese">Simplified Chinese</string>
+
+    <string name="share_error_no_text">No share text was received.</string>
+    <string name="share_error_no_url">No http(s) URL was found in the shared text.</string>
+    <string name="share_error_unsupported">Only WeChat article links and Xiaohongshu links are supported right now.</string>
+    <string name="share_ready">A valid article link is ready to send.</string>
+
+    <string name="source_wechat">WeChat</string>
+    <string name="source_xiaohongshu">Xiaohongshu</string>
+    <string name="source_unknown">Unknown</string>
+
+    <string name="task_message_default">Waiting for the forwarding service response.</string>
+
+    <string name="recent_message_enqueued">Waiting to send.</string>
+    <string name="recent_message_running">Sending now.</string>
+    <string name="recent_message_retrying">Retrying now.</string>
+    <string name="recent_message_succeeded">Accepted by the forwarding service.</string>
+    <string name="recent_message_failed">Submission failed.</string>
+    <string name="recent_message_cancelled">Cancelled.</string>
+
+    <string name="recent_state_enqueued">Queued</string>
+    <string name="recent_state_running">Sending</string>
+    <string name="recent_state_retrying">Retrying</string>
+    <string name="recent_state_succeeded">Accepted</string>
+    <string name="recent_state_failed">Failed</string>
+    <string name="recent_state_cancelled">Cancelled</string>
+
+    <string name="local_status_headline_enqueued">Queued</string>
+    <string name="local_status_headline_running">Sending</string>
+    <string name="local_status_headline_retrying">Retrying</string>
+    <string name="local_status_headline_succeeded">Handed Off</string>
+    <string name="local_status_headline_failed">Submission Failed</string>
+    <string name="local_status_headline_cancelled">Cancelled</string>
+
+    <string name="local_status_note_enqueued">Waiting to send to the forwarding service.</string>
+    <string name="local_status_note_running">The phone is sending the prepared link.</string>
+    <string name="local_status_note_retrying">The forwarding service did not respond. The app will retry.</string>
+    <string name="local_status_note_succeeded">The phone has handed the task to the forwarding service.</string>
+    <string name="local_status_note_failed">The task did not reach the forwarding service.</string>
+    <string name="local_status_note_cancelled">This task was cancelled.</string>
+
+    <string name="recent_time_now">Just now</string>
+    <string name="recent_time_min">%1$d min ago</string>
+    <string name="recent_time_hour">%1$d hr ago</string>
+    <string name="recent_time_day">%1$d day ago</string>
+    <string name="task_id_short">Task %1$s</string>
+
+    <string name="duration_seconds">%1$d s</string>
+    <string name="duration_minutes_seconds">%1$d min %2$d s</string>
+    <string name="duration_hours_minutes_seconds">%1$d hr %2$d min %3$d s</string>
+
+    <string name="manual_verification_note">Manual verification is required in the managed browser.</string>
+    <string name="manual_verification_detail">WeChat returned a verification page. Open the article in the OpenClaw managed browser, complete the verification, and then submit the task again.</string>
+    <string name="manual_verification_headline">Manual Verification Required</string>
+    <string name="manual_verification_panel_title">Complete verification in the managed browser</string>
+    <string name="manual_verification_panel_body">Open this WeChat article in the OpenClaw managed browser profile and finish the verification step. Then come back and submit the task again.</string>
+
+    <string name="profile_revalidation_headline">Verification Needed Again</string>
+    <string name="profile_revalidation_note">The earlier WeChat verification may have expired.</string>
+    <string name="profile_revalidation_detail">The managed browser profile may have lost the earlier WeChat verification or login state. Open the article again in the OpenClaw managed browser and complete verification one more time.</string>
+    <string name="profile_revalidation_panel_title">Verify the managed browser profile again</string>
+    <string name="profile_revalidation_panel_body">Open this article again in the OpenClaw managed browser profile and complete verification or login again. Then submit the task again.</string>
+
+    <string name="wechat_parameter_error_headline">Link Parameter Error</string>
+    <string name="wechat_parameter_error_note">This WeChat link opened a parameter error page. Share the original article link again.</string>
+    <string name="wechat_parameter_error_detail">WeChat returned a parameter error page instead of the article body. Go back to the article and share the original link again.</string>
+
+    <string name="cancel_requested_note">A cancel request has been sent to the forwarding service.</string>
+    <string name="cancel_request_failed">Failed to send the cancel request.</string>
+    <string name="task_already_completed_note">The task has already completed. No cancel request is needed.</string>
+    <string name="task_already_failed_note">The task has already failed and cannot be cancelled.</string>
+    <string name="session_lock_note">The current OpenClaw session is busy. The forwarding service will wait and retry.</string>
+    <string name="session_lock_detail">The current OpenClaw agent session is being used by another run. Wait a moment, or avoid using the same agent at the same time.</string>
+    <string name="network_error_note">The forwarding service could not reach the model provider. Try again later.</string>
+    <string name="network_error_detail">OpenClaw hit a network error while calling the model provider. Check the current network or proxy settings and try again later.</string>
+
+    <string name="relay_accepted_headline">Task Received</string>
+    <string name="relay_running_headline">Task Processing</string>
+    <string name="relay_completed_headline">Task Completed</string>
+    <string name="relay_cancelled_headline">Task Cancelled</string>
+    <string name="relay_cancelling_headline">Cancelling Task</string>
+    <string name="relay_failed_headline">Task Failed</string>
+
+    <string name="relay_accepted_note">Task received and waiting to start.</string>
+    <string name="relay_running_note">Task is still processing.</string>
+    <string name="relay_completed_note">Task completed.</string>
+    <string name="relay_cancelled_note">Task cancelled.</string>
+    <string name="relay_failed_note">Task failed during processing.</string>
+
+    <string name="problem_title_task_completed">Task completed</string>
+    <string name="problem_title_task_cancelled">Task cancelled</string>
+    <string name="problem_title_task_failed">Task failed</string>
+    <string name="problem_title_cancelling">Cancellation in progress</string>
+    <string name="problem_title_processing_busy">Processing method is busy</string>
+    <string name="problem_title_network_error">Network or provider request failed</string>
+    <string name="problem_title_auth_not_ready">Authentication is not ready</string>
+    <string name="problem_title_processing_timeout">Processing timed out</string>
+    <string name="problem_title_processing_start_failed">Processing could not start</string>
+    <string name="problem_title_command_not_found">Processing command was not found</string>
+    <string name="problem_title_command_not_configured">Command template is missing</string>
+    <string name="problem_title_processing_error">Processing command exited with an error</string>
+    <string name="problem_title_processing_reported_failure">Processing method reported a failure</string>
+    <string name="problem_title_body_too_short">Article body was too short</string>
+
+    <string name="action_manual_verification_1">Open the article in the managed browser and complete verification.</string>
+    <string name="action_manual_verification_2">Submit the task again after verification succeeds.</string>
+    <string name="action_profile_revalidation_1">Open the article again in the managed browser profile.</string>
+    <string name="action_profile_revalidation_2">Finish verification or sign in again, then retry the task.</string>
+    <string name="action_wechat_parameter_error_1">Go back to the original article and share the original link again.</string>
+    <string name="action_wechat_parameter_error_2">Avoid shortened or expired share pages when resubmitting.</string>
+    <string name="action_body_too_short_1">Open the article once in the managed browser and make sure it loads fully.</string>
+    <string name="action_body_too_short_2">Retry after the article body is visible.</string>
+    <string name="action_session_locked_1">Wait for the current run to finish and let relay retry automatically.</string>
+    <string name="action_session_locked_2">Avoid starting multiple tasks against the same target at the same time.</string>
+    <string name="action_network_error_1">Check the current network or proxy settings on this machine.</string>
+    <string name="action_network_error_2">Retry after the network path is stable again.</string>
+    <string name="action_auth_error_1">Check the local tool login or API key configuration.</string>
+    <string name="action_auth_error_2">Run diagnostics before retrying.</string>
+    <string name="action_timeout_1">Retry once to confirm whether the timeout was temporary.</string>
+    <string name="action_timeout_2">Increase the timeout only if this task type is expected to run longer.</string>
+    <string name="action_start_failed_1">Check the configured command path and local tool installation.</string>
+    <string name="action_start_failed_2">Use diagnostics or relay doctor to confirm the environment.</string>
+    <string name="action_command_not_found_1">Set the correct command path in Settings.</string>
+    <string name="action_command_not_found_2">Switch to the mock or shell-command processing method for smoke tests.</string>
+    <string name="action_command_not_configured_1">Open Settings and add a trusted command template.</string>
+    <string name="action_command_not_configured_2">Switch to another processing method if you do not plan to use a custom command.</string>
+    <string name="action_nonzero_exit_1">Open the task files and inspect stdout.txt and stderr.txt.</string>
+    <string name="action_nonzero_exit_2">Fix the command error, then retry the task.</string>
+    <string name="action_reported_failure_1">Review the result summary and task files for the reported reason.</string>
+    <string name="action_reported_failure_2">Retry only after confirming the cause is temporary or corrected.</string>
+    <string name="action_completed_1">Review the result summary or task files if you need the full output.</string>
+    <string name="action_completed_2">Reuse the same settings if you want to submit another task.</string>
+    <string name="action_cancelled_1">Open the task details if you need to confirm where the task stopped.</string>
+    <string name="action_cancelled_2">Submit the task again when you are ready to continue.</string>
+    <string name="action_running_1">Wait for the relay to finish the current step, or cancel the task if it is no longer needed.</string>
+    <string name="action_failed_1">Open the task files or diagnostic summary for more detail.</string>
+    <string name="action_failed_2">Retry only after checking the likely cause.</string>
+
+    <string name="timeline_label_queued">Queued</string>
+    <string name="timeline_label_preparing">Preparing task</string>
+    <string name="timeline_label_opening_browser">Opening browser</string>
+    <string name="timeline_label_running_executor">Running processing method</string>
+    <string name="timeline_label_finalizing">Finalizing result</string>
+    <string name="timeline_label_completed">Completed</string>
+    <string name="timeline_label_failed">Failed</string>
+    <string name="timeline_label_cancelled">Cancelled</string>
+    <string name="timeline_label_cancelling">Cancellation requested</string>
+
+    <string name="summary_highlights">Highlights:</string>
+    <string name="summary_topic">Topic: </string>
+    <string name="summary_takeaway">Takeaway: </string>
+    <string name="summary_note">Note: </string>
+    <string name="summary_paper">Paper: </string>
+    <string name="summary_possible">Possible: </string>
+    <string name="summary_link_processed">Link processed successfully.</string>
+    <string name="summary_no_explicit_papers">No explicitly mentioned papers found.</string>
+    <string name="summary_no_related_papers">No clearly related papers found.</string>
+    <string name="summary_found_explicit_papers">Found %1$d explicitly mentioned papers.</string>
+    <string name="summary_possible_papers_detected">No explicit papers found. %1$d possible papers detected.</string>
+
+    <string name="task_flow_close">Close</string>
+</resources>

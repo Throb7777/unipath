@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ task.taskId }}</h2>
+      <p>{{ task.relayMessage or task.stageLabel }}</p>
+    </div>
+    {% if task.canCancel %}
+    <form method="post" action="{{ page_url('/ui/tasks/' ~ task.taskId ~ '/cancel') }}" class="actions compact-actions">
+      <button type="submit" class="danger">{{ t('task.cancel') }}</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="grid two">
+    <div class="status-card {{ 'ok' if task.status == 'completed' else 'warn' if task.canCancel else 'danger' }}"><span>{{ t('task.status') }}</span><strong>{{ task.stageLabel }}</strong></div>
+    <div class="status-card ok"><span>{{ t('task.executor') }}</span><strong>{{ task.executorKind or t('core.label') }}</strong></div>
+    <div class="status-card ok"><span>{{ t('task.mode') }}</span><strong>{{ task.mode }}</strong></div>
+    <div class="status-card ok"><span>{{ t('task.duration') }}</span><strong>{{ format_duration_ms(task.durationMs) }}</strong></div>
+  </div>
+  <ul class="meta-list detail-meta">
+    <li><strong>{{ t('task.source') }}:</strong> {{ task.source }}</li>
+    <li class="path-list-item"><strong>{{ t('task.normalized_url') }}:</strong> <span class="path-value">{{ task.normalizedUrl }}</span></li>
+    <li><strong>{{ t('task.created') }}:</strong> {{ format_iso_local(task.createdAt) }}</li>
+    <li><strong>{{ t('task.updated') }}:</strong> {{ format_iso_local(task.updatedAt) }}</li>
+    <li class="path-list-item"><strong>{{ t('task.task_dir') }}:</strong> <span class="path-value">{{ task.taskDir }}</span></li>
+  </ul>
+</section>
+
+{% if task.problemTitle or task.suggestedActions %}
+<section class="panel">
+  <h2>{{ t('task.problem') }}</h2>
+  {% if task.problemTitle %}
+  <p class="lead">{{ task.problemTitle }}</p>
+  {% endif %}
+  {% if task.suggestedActions %}
+  <p class="muted"><strong>{{ t('task.next_steps') }}</strong></p>
+  <ul class="meta-list subtle">
+    {% for item in task.suggestedActions %}
+    <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>{{ t('task.timeline') }}</h2>
+  <ul class="timeline">
+    {% for entry in task.timeline %}
+    <li>
+      <strong>{{ entry.label }}</strong>
+      <span>{{ format_iso_local(entry.at) }}</span>
+      {% if entry.message %}<p>{{ entry.message }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>{{ t('task.files') }}</h2>
+  {% if artifacts %}
+  <div class="artifact-list">
+    {% for artifact in artifacts %}
+    <div class="artifact-card">
+      <strong>{{ artifact.name }}</strong>
+      <code>{{ artifact.path }}</code>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>{{ t('task.files_empty') }}</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>{{ t('task.result_summary') }}</h2>
+  <pre class="code">{{ task.resultSummary or task.errorMessage or task.relayMessage }}</pre>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('task.diagnostic_summary') }}</h2>
+      <p>{{ task.problemTitle or task.stageLabel }}</p>
+    </div>
+    <button type="button" class="secondary copy-button" data-copy-text="{{ task.diagnosticSummary }}">{{ t('task.copy_diagnostic') }}</button>
+  </div>
+  <pre class="code">{{ task.diagnosticSummary }}</pre>
+</section>
+{% endblock %}

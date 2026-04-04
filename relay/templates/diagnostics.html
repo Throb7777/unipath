@@ -1,0 +1,138 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('diag.title') }}</h2>
+      <p>{{ t('diag.body') }}</p>
+    </div>
+  </div>
+  <div class="hero-stat-grid">
+    <div class="hero-stat">
+      <span>{{ t('overview.status') }}</span>
+      <strong>{{ diagnostic_report.status }}</strong>
+    </div>
+    <div class="hero-stat">
+      <span>{{ t('diag.configured_executor') }}</span>
+      <strong>{{ health.configuredExecutor }}</strong>
+    </div>
+    <div class="hero-stat">
+      <span>{{ t('diag.default_mode') }}</span>
+      <strong>{{ health.defaultMode }}</strong>
+    </div>
+    <div class="hero-stat">
+      <span>{{ t('diag.runtime_config') }}</span>
+      <strong class="path-value path-value-soft">{{ runtime_metadata.runtimeConfigPath }}</strong>
+    </div>
+  </div>
+  <div class="grid two">
+    <div class="status-card {{ 'ok' if health.status == 'ok' else 'warn' }}"><span>{{ t('diag.relay_status') }}</span><strong>{{ health.status }}</strong></div>
+    <div class="status-card {{ 'ok' if health.executorAvailable else 'warn' }}"><span>{{ t('diag.configured_executor') }}</span><strong>{{ health.configuredExecutor }}</strong><p>{{ health.executorMessage }}</p></div>
+    <div class="status-card ok"><span>{{ t('diag.default_mode') }}</span><strong>{{ health.defaultMode }}</strong></div>
+    <div class="status-card ok"><span>{{ t('diag.runtime_config') }}</span><strong class="path-value path-value-soft">{{ runtime_metadata.runtimeConfigPath }}</strong></div>
+    <div class="status-card {{ 'ok' if health.runtimeWritable else 'warn' }}"><span>{{ t('diag.workspace_writable') }}</span><strong>{{ t('diag.yes') if health.runtimeWritable else t('diag.no') }}</strong></div>
+    <div class="status-card {{ 'ok' if health.databaseReady else 'warn' }}"><span>{{ t('diag.database_ready') }}</span><strong>{{ t('diag.yes') if health.databaseReady else t('diag.no') }}</strong></div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('diag.next_steps') }}</h2>
+      <p>{{ t('diag.next_steps_body') }}</p>
+    </div>
+  </div>
+  <div class="advice-list">
+    {% if diagnostic_report.blockers %}
+    {% for item in diagnostic_report.blockers %}
+    <div class="advice-card warn">
+      <strong>{{ item.title }}</strong>
+      <p>{{ item.message }}</p>
+      {% if item.suggested_actions %}
+      <ul class="meta-list subtle">
+        {% for action in item.suggested_actions %}
+        <li>{{ action }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% if not diagnostic_report.blockers %}
+    <div class="advice-card ok">
+      <strong>{{ t('diag.executor_ready_title') }}</strong>
+      <p>{{ t('diag.executor_ready_body') }}</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('diag.environment_summary') }}</h2>
+      <p>{{ t('diag.environment_summary_body') }}</p>
+    </div>
+    <button type="button" class="secondary copy-button" data-copy-text="{{ environment_summary }}">{{ t('diag.copy_summary') }}</button>
+  </div>
+  <pre class="code">{{ environment_summary }}</pre>
+</section>
+
+<section class="panel">
+  <h2>{{ t('diag.executor_health') }}</h2>
+  <div class="grid two">
+    {% for item in executor_healths %}
+    <div class="stat">
+      <span>{{ item.label }}</span>
+      <strong>{{ t('settings.ready') if item.available else t('settings.needs_setup') }}</strong>
+      <p class="muted">{{ item.message or "-" }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2>{{ t('diag.check_groups') }}</h2>
+{% for section in diagnostic_report.sections %}
+  <div class="group">
+    <div class="group-heading">
+      <h3>{{ section.label }}</h3>
+    </div>
+    <ul class="meta-list subtle">
+      {% for item in section["items"] %}
+      <li>
+        <strong>{{ item.title }}:</strong> {{ item.message }}
+        {% if item.suggested_actions %}
+        <div class="inline-notes">
+          {% for action in item.suggested_actions %}
+          <span>{{ action }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>{{ t('diag.config_behavior') }}</h2>
+  <ul class="meta-list subtle">
+    <li><strong>{{ t('diag.bootstrap_settings') }}:</strong> {{ t('diag.bootstrap_body') }}</li>
+    <li><strong>{{ t('diag.runtime_settings') }}:</strong> {{ t('diag.runtime_body') }}</li>
+    <li><strong>{{ t('diag.application_scope') }}:</strong> {{ t('diag.application_scope_body') }}</li>
+    <li><strong>{{ t('settings.restart_required') }}:</strong> {{ runtime_metadata.applyScope.restartRequiredFields | join(", ") or t('settings.none') }}</li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>{{ t('diag.raw_health') }}</h2>
+  <pre class="code">{{ health | tojson(indent=2) }}</pre>
+</section>
+
+<section class="panel">
+  <h2>{{ t('diag.raw_runtime') }}</h2>
+  <pre class="code">{{ runtime_payload | tojson(indent=2) }}</pre>
+</section>
+{% endblock %}

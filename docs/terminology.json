@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "version": 2,
+    "defaultLanguage": "en",
+    "supportedLanguages": ["en", "zh-CN"],
+    "styleGuide": {
+      "summary": "Use simple, product-facing wording. Prefer clear everyday terms over internal engineering terms. Keep tone neutral and concise.",
+      "rules": [
+        "Use one primary display term for each concept.",
+        "Prefer user-facing names over internal technical names in UI and guides.",
+        "Keep wording clear and calm; avoid slang and over-technical phrasing.",
+        "Do not translate internal IDs such as mode ids, executor ids, task ids, or file paths."
+      ]
+    }
+  },
+  "terms": {
+    "app.relay": { "internal": "relay", "display": { "en": "Forwarding Service", "zh-CN": "转发服务" } },
+    "task.task": { "internal": "task", "display": { "en": "Task", "zh-CN": "任务" } },
+    "task.task_id": { "internal": "task_id", "display": { "en": "Task ID", "zh-CN": "任务编号" } },
+    "task.recent_tasks": { "internal": "recent_tasks", "display": { "en": "Recent Tasks", "zh-CN": "近期任务" } },
+    "task.timeline": { "internal": "timeline", "display": { "en": "Step Flow", "zh-CN": "处理步骤" } },
+    "task.result_summary": { "internal": "result_summary", "display": { "en": "Result Summary", "zh-CN": "结果摘要" } },
+    "task.files": { "internal": "artifacts", "display": { "en": "Task Files", "zh-CN": "任务文件" } },
+    "config.runtime_config": { "internal": "runtime_config", "display": { "en": "Current Configuration", "zh-CN": "当前配置" } },
+    "config.config_file": { "internal": "config_file", "display": { "en": "Configuration File", "zh-CN": "配置文件" } },
+    "config.config_source": { "internal": "config_source", "display": { "en": "Configuration Source", "zh-CN": "配置来源" } },
+    "config.mode": { "internal": "mode", "display": { "en": "Processing Mode", "zh-CN": "处理模式" } },
+    "config.default_mode": { "internal": "default_mode", "display": { "en": "Default Mode", "zh-CN": "默认模式" } },
+    "config.executor": { "internal": "executor", "display": { "en": "Processing Method", "zh-CN": "处理方式" } },
+    "config.executor_technical": { "internal": "executor", "display": { "en": "Executor", "zh-CN": "执行器" } },
+    "diag.diagnostics": { "internal": "diagnostics", "display": { "en": "Diagnostics", "zh-CN": "诊断" } }
+  },
+  "statuses": {
+    "queued": { "en": "Queued", "zh-CN": "已排队" },
+    "preparing": { "en": "Preparing", "zh-CN": "准备中" },
+    "running": { "en": "Running", "zh-CN": "处理中" },
+    "finalizing": { "en": "Finalizing", "zh-CN": "收尾中" },
+    "cancelling": { "en": "Cancelling", "zh-CN": "正在中断" },
+    "cancelled": { "en": "Cancelled", "zh-CN": "已中断" },
+    "completed": { "en": "Completed", "zh-CN": "已完成" },
+    "failed": { "en": "Failed", "zh-CN": "已失败" }
+  },
+  "actions": {
+    "save": { "en": "Save", "zh-CN": "保存" },
+    "save_and_test": { "en": "Save and Test", "zh-CN": "保存并测试" },
+    "test_connection": { "en": "Test Connection", "zh-CN": "测试连接" },
+    "test_executor": { "en": "Test Processing Method", "zh-CN": "测试处理方式" },
+    "cancel_task": { "en": "Cancel Task", "zh-CN": "中断任务" },
+    "copy_result": { "en": "Copy Result", "zh-CN": "复制结果" },
+    "back_home": { "en": "Back Home", "zh-CN": "返回首页" },
+    "clear": { "en": "Clear", "zh-CN": "清空" }
+  },
+  "executors": {
+    "openclaw": { "en": "OpenClaw Processing Method", "zh-CN": "OpenClaw 处理方式" },
+    "shell_command": { "en": "Command Processing Method", "zh-CN": "命令处理方式" },
+    "mock": { "en": "Mock Processing Method", "zh-CN": "模拟处理方式" }
+  },
+  "errors": {
+    "manual_verification_required": { "en": "Manual verification required", "zh-CN": "需要手动验证" },
+    "profile_revalidation_required": { "en": "Verification expired", "zh-CN": "验证状态已失效" },
+    "wechat_parameter_error": { "en": "WeChat link parameter error", "zh-CN": "微信链接参数异常" },
+    "executor_session_locked": { "en": "Processing session is busy", "zh-CN": "处理会话正忙" },
+    "executor_network_error": { "en": "Processing network error", "zh-CN": "处理网络错误" }
+  }
+}

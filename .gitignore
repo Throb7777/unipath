@@ -1,0 +1,35 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Relay local files
+relay/.venv/
+relay/.env
+relay/runtime/data/
+relay/runtime/logs/
+relay/runtime/tasks/
+!relay/runtime/.gitkeep
+relay/relay/runtime*/
+
+# Android local files
+Android/local.properties
+Android/.gradle/
+Android/.idea/
+Android/.kotlin/
+Android/.android-user-home/
+Android/.gradle-user-home/
+Android/.gradle-user-home-codex/
+Android/app/build/
+Android/build/
+Android/*.iml
+
+# Build outputs
+*.apk
+*.aab

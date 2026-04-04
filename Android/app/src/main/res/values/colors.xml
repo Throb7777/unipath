@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="seed">#1E6F5C</color>
+    <color name="icon_tint">#FFFFFF</color>
+    <color name="surface_page">#F6F2F7</color>
+    <color name="surface_card">#FFFBFF</color>
+    <color name="surface_stroke">#D7D0DD</color>
+    <color name="text_primary">#231B29</color>
+    <color name="text_secondary">#665D6D</color>
+    <color name="success">#0E7C3A</color>
+    <color name="success_soft">#D9F4E2</color>
+    <color name="warning">#A15C00</color>
+    <color name="warning_soft">#FFE7C4</color>
+    <color name="danger">#B3261E</color>
+    <color name="danger_soft">#F9DEDC</color>
+    <color name="pending">#6C6274</color>
+    <color name="pending_soft">#E9E1EC</color>
+    <color name="link_blue">#245EA7</color>
+</resources>

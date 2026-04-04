@@ -1,0 +1,25 @@
+package com.peter.paperharvestshare.model
+
+data class SubmissionRecord(
+    val sequenceNumber: Long = 0L,
+    val clientSubmissionId: String,
+    val workId: String,
+    val sourceType: SourceType,
+    val rawUrl: String?,
+    val normalizedUrl: String,
+    val relayBaseUrlSnapshot: String?,
+    val modeIdSnapshot: String?,
+    val modeLabelSnapshot: String?,
+    val relayStatusSnapshot: String?,
+    val relayErrorCodeSnapshot: String?,
+    val relayDurationMsSnapshot: Long?,
+    val relayTimelineSnapshot: String?,
+    val state: TaskState,
+    val message: String,
+    val relayTaskId: String?,
+    val createdAtEpochMs: Long,
+    val updatedAtEpochMs: Long,
+    val relayProblemTitleSnapshot: String? = null,
+    val relaySuggestedActionsSnapshot: List<String> = emptyList(),
+    val relayDiagnosticSummarySnapshot: String? = null,
+)

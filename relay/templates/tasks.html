@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="panel">
+  <div class="section-heading">
+    <div>
+      <h2>{{ t('tasks.title') }}</h2>
+      <p>{{ t('tasks.body') }}</p>
+    </div>
+  </div>
+  <form method="get" action="/ui/tasks" class="inline-form">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <input name="status" placeholder="{{ t('tasks.filter_status') }}" value="{{ filters.status }}">
+    <select name="executor">
+      <option value="">{{ t('tasks.filter_executor_all') }}</option>
+      {% for executor in executors %}
+      <option value="{{ executor.executorId }}" {% if filters.executor == executor.executorId %}selected{% endif %}>{{ executor.label }}</option>
+      {% endfor %}
+    </select>
+    <input name="source" placeholder="{{ t('tasks.filter_source') }}" value="{{ filters.source }}">
+    <button type="submit">{{ t('tasks.filter_submit') }}</button>
+  </form>
+  {% if tasks %}
+  <div class="task-card-list">
+    {% for task in tasks %}
+    <a href="{{ page_url('/ui/tasks/' ~ task.task_id) }}" class="task-card">
+      <div class="task-card-top">
+        <div class="task-chip-row">
+          <span class="chip {{ task.status_tone }}">{{ task.stage_label }}</span>
+          <span class="chip neutral">{{ task.source_label }}</span>
+          <span class="chip neutral">{{ task.executor_kind or t('core.label') }}</span>
+          <span class="chip neutral">{{ task.mode }}</span>
+        </div>
+        <span class="task-meta">{{ task.duration }}</span>
+      </div>
+      <h3>{{ task.target }}</h3>
+      <p>{{ task.summary }}</p>
+      <div class="task-card-bottom">
+        <span>{{ task.task_id }}</span>
+        <span>{{ task.updated_at }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <strong>{{ t('tasks.empty_title') }}</strong>
+    <p>{{ t('tasks.empty_body') }}</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

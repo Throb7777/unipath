@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">文章转发助手</string>
+
+    <string name="topbar_home">文章转发助手</string>
+    <string name="topbar_share">确认转发</string>
+    <string name="topbar_status">转发状态</string>
+    <string name="topbar_flow">完整流程</string>
+    <string name="topbar_settings">设置</string>
+    <string name="settings_service_section_title">转发服务</string>
+    <string name="settings_service_section_hint">先设置服务地址，再测试连接并选择可用模式。</string>
+    <string name="settings_app_section_title">应用设置</string>
+    <string name="settings_app_section_hint">这里用于调整应用自身的显示设置。</string>
+    <string name="action_back">返回</string>
+    <string name="settings_entry">设置</string>
+
+    <string name="main_summary">接收分享链接，并交给转发服务继续处理。</string>
+    <string name="main_relay_label">转发服务</string>
+    <string name="main_mode_label">当前模式</string>
+    <string name="main_recent_label">近期任务</string>
+    <string name="main_recent_hint">这里只保留最近 20 条任务。</string>
+    <string name="main_no_tasks_hint">分享一篇文章过来后，这里会显示近期任务。</string>
+    <string name="recent_target_unknown">未知链接</string>
+    <string name="recent_status_received">已接收</string>
+    <string name="recent_status_processing">处理中</string>
+    <string name="recent_status_cancelling">正在中断</string>
+    <string name="recent_status_completed">已完成</string>
+    <string name="recent_status_failed">已失败</string>
+    <string name="recent_status_cancelled">已取消</string>
+    <string name="recent_service_completed">任务已完成。</string>
+    <string name="recent_service_failed">任务处理失败。</string>
+    <string name="recent_service_cancelled">任务已中断。</string>
+    <string name="recent_service_received">任务已接收。</string>
+    <string name="recent_service_processing">任务仍在处理中。</string>
+
+    <string name="share_source_label">来源</string>
+    <string name="share_service_label">转发服务</string>
+    <string name="share_normalized_label">整理后的链接</string>
+    <string name="share_raw_label">原始分享文本</string>
+    <string name="share_instruction_label">当前模式</string>
+    <string name="instruction_summary">任务会按当前转发规则提交给转发服务。</string>
+
+    <string name="action_cancel">取消</string>
+    <string name="action_submit">发送</string>
+    <string name="action_copy_result">复制结果</string>
+    <string name="action_home">返回首页</string>
+    <string name="action_clear">清空</string>
+    <string name="action_cancel_task">中断任务</string>
+    <string name="action_view_full_flow">查看完整流程</string>
+
+    <string name="status_detail_label">返回信息</string>
+    <string name="status_task_label">任务编号</string>
+    <string name="status_timeline_label">处理步骤</string>
+    <string name="status_next_steps_label">后续建议</string>
+    <string name="status_duration_placeholder">-</string>
+    <string name="status_timeline_placeholder">还没有步骤记录。</string>
+    <string name="status_missing_work_id">缺少任务编号，无法显示状态。</string>
+    <string name="status_page_note">这里会持续同步转发服务返回的最新状态。</string>
+    <string name="task_id_placeholder">暂未生成</string>
+    <string name="copy_done">已复制。</string>
+    <string name="copy_diagnostic_done">已复制诊断摘要。</string>
+
+    <string name="stage_received">已收到分享</string>
+    <string name="stage_normalized">已整理链接</string>
+    <string name="stage_submitting">发送给转发服务</string>
+    <string name="stage_accepted">转发服务已接收</string>
+    <string name="stage_running">转发服务处理中</string>
+    <string name="stage_completed">转发服务已完成</string>
+    <string name="stage_failed">转发服务处理失败</string>
+    <string name="stage_manual_verification">等待手动验证</string>
+    <string name="stage_cancelling">正在中断</string>
+
+    <string name="settings_service_label">转发服务地址</string>
+    <string name="settings_service_placeholder">http://192.168.1.12:8080</string>
+    <string name="settings_service_hint">请填写服务基础地址，例如 http://192.168.1.12:8080 。</string>
+    <string name="settings_status_label">连接状态</string>
+    <string name="settings_mode_label">可用模式</string>
+    <string name="settings_mode_hint">先测试连接并拉取模式列表，再选择默认模式。</string>
+    <string name="settings_test">测试连接</string>
+    <string name="settings_save">保存</string>
+    <string name="settings_reset">恢复默认</string>
+    <string name="settings_loading">正在从转发服务拉取配置…</string>
+    <string name="settings_no_modes">暂时还没有可用模式。</string>
+    <string name="settings_fetch_required">请先测试连接并拉取模式列表。</string>
+    <string name="settings_invalid_url">转发服务地址不合法，请使用 http 或 https 开头的地址。</string>
+    <string name="settings_save_done">设置已保存。</string>
+    <string name="settings_reset_done">已恢复默认设置。</string>
+    <string name="settings_fetch_failed">拉取模式列表失败。</string>
+    <string name="settings_service_ready">连接正常，模式列表已加载。</string>
+    <string name="settings_language_label">界面语言</string>
+    <string name="settings_language_hint">选择应用显示语言，点击保存后生效。</string>
+    <string name="language_english">English</string>
+    <string name="language_simplified_chinese">简体中文</string>
+
+    <string name="share_error_no_text">没有收到可处理的分享文本。</string>
+    <string name="share_error_no_url">分享文本里没有找到 http(s) 链接。</string>
+    <string name="share_error_unsupported">目前只支持公众号文章链接和小红书链接。</string>
+    <string name="share_ready">已识别到可提交的文章链接。</string>
+
+    <string name="source_wechat">公众号</string>
+    <string name="source_xiaohongshu">小红书</string>
+    <string name="source_unknown">未知</string>
+
+    <string name="task_message_default">正在等待转发服务返回结果。</string>
+
+    <string name="recent_message_enqueued">等待发送。</string>
+    <string name="recent_message_running">正在发送。</string>
+    <string name="recent_message_retrying">正在重试。</string>
+    <string name="recent_message_succeeded">转发服务已接收。</string>
+    <string name="recent_message_failed">发送失败。</string>
+    <string name="recent_message_cancelled">已取消。</string>
+
+    <string name="recent_state_enqueued">排队中</string>
+    <string name="recent_state_running">发送中</string>
+    <string name="recent_state_retrying">重试中</string>
+    <string name="recent_state_succeeded">已接收</string>
+    <string name="recent_state_failed">失败</string>
+    <string name="recent_state_cancelled">已取消</string>
+
+    <string name="local_status_headline_enqueued">已排队</string>
+    <string name="local_status_headline_running">正在发送</string>
+    <string name="local_status_headline_retrying">正在重试</string>
+    <string name="local_status_headline_succeeded">已交接给转发服务</string>
+    <string name="local_status_headline_failed">发送失败</string>
+    <string name="local_status_headline_cancelled">已取消</string>
+
+    <string name="local_status_note_enqueued">等待发往转发服务。</string>
+    <string name="local_status_note_running">手机正在发送整理后的链接。</string>
+    <string name="local_status_note_retrying">转发服务暂时没有响应，应用会稍后重试。</string>
+    <string name="local_status_note_succeeded">手机已经把任务交给转发服务。</string>
+    <string name="local_status_note_failed">这次任务还没有成功交给转发服务。</string>
+    <string name="local_status_note_cancelled">这次任务已取消。</string>
+
+    <string name="recent_time_now">刚刚</string>
+    <string name="recent_time_min">%1$d 分钟前</string>
+    <string name="recent_time_hour">%1$d 小时前</string>
+    <string name="recent_time_day">%1$d 天前</string>
+    <string name="task_id_short">任务 %1$s</string>
+
+    <string name="duration_seconds">%1$d秒</string>
+    <string name="duration_minutes_seconds">%1$d分 %2$d秒</string>
+    <string name="duration_hours_minutes_seconds">%1$d小时 %2$d分 %3$d秒</string>
+
+    <string name="manual_verification_note">需要在受管浏览器里完成一次手动验证。</string>
+    <string name="manual_verification_detail">微信返回了验证页。请在 OpenClaw 的受管浏览器里打开这篇文章，完成验证后再重新提交任务。</string>
+    <string name="manual_verification_headline">需要手动验证</string>
+    <string name="manual_verification_panel_title">请先在受管浏览器里完成验证</string>
+    <string name="manual_verification_panel_body">请在 OpenClaw 的受管浏览器 profile 中打开这篇公众号文章并完成验证，然后回到这里重新提交任务。</string>
+
+    <string name="profile_revalidation_headline">需要重新验证</string>
+    <string name="profile_revalidation_note">之前的微信验证状态可能已经失效。</string>
+    <string name="profile_revalidation_detail">受管浏览器 profile 可能丢失了之前的微信验证或登录状态。请在 OpenClaw 的受管浏览器里重新打开文章并完成验证后再提交。</string>
+    <string name="profile_revalidation_panel_title">请重新验证受管浏览器</string>
+    <string name="profile_revalidation_panel_body">请在 OpenClaw 的受管浏览器 profile 中重新打开这篇文章，并完成重新验证或重新登录，然后回到这里重新提交。</string>
+
+    <string name="wechat_parameter_error_headline">链接参数异常</string>
+    <string name="wechat_parameter_error_note">这条公众号链接打开的是参数错误页，请重新分享原始文章链接。</string>
+    <string name="wechat_parameter_error_detail">微信返回了参数错误页，而不是文章正文。请回到公众号文章页里重新分享原始链接。</string>
+
+    <string name="cancel_requested_note">已向转发服务发送中断请求。</string>
+    <string name="cancel_request_failed">中断请求发送失败。</string>
+    <string name="task_already_completed_note">任务已经完成，无需再中断。</string>
+    <string name="task_already_failed_note">任务已经失败，无法再中断。</string>
+    <string name="session_lock_note">当前 OpenClaw 会话正忙，转发服务会继续等待并重试。</string>
+    <string name="session_lock_detail">当前 OpenClaw agent 会话正在被其他运行占用。可以稍等片刻，或避免同时使用同一个 agent。</string>
+    <string name="network_error_note">转发服务与模型提供方通信失败，请稍后重试。</string>
+    <string name="network_error_detail">OpenClaw 在调用模型时遇到了网络错误。请检查当前网络或代理设置后稍后重试。</string>
+
+    <string name="relay_accepted_headline">任务已接收</string>
+    <string name="relay_running_headline">任务处理中</string>
+    <string name="relay_completed_headline">任务已完成</string>
+    <string name="relay_cancelled_headline">任务已中断</string>
+    <string name="relay_cancelling_headline">正在中断任务</string>
+    <string name="relay_failed_headline">任务处理失败</string>
+
+    <string name="relay_accepted_note">任务已接收，正在等待开始处理。</string>
+    <string name="relay_running_note">任务仍在处理中。</string>
+    <string name="relay_completed_note">任务已完成。</string>
+    <string name="relay_cancelled_note">任务已中断。</string>
+    <string name="relay_failed_note">任务在处理过程中失败。</string>
+
+    <string name="problem_title_task_completed">任务已完成</string>
+    <string name="problem_title_task_cancelled">任务已中断</string>
+    <string name="problem_title_task_failed">任务处理失败</string>
+    <string name="problem_title_cancelling">正在中断任务</string>
+    <string name="problem_title_processing_busy">处理方式正忙</string>
+    <string name="problem_title_network_error">网络或上游请求失败</string>
+    <string name="problem_title_auth_not_ready">认证尚未准备好</string>
+    <string name="problem_title_processing_timeout">处理已超时</string>
+    <string name="problem_title_processing_start_failed">无法启动处理方式</string>
+    <string name="problem_title_command_not_found">未找到处理命令</string>
+    <string name="problem_title_command_not_configured">命令模板尚未配置</string>
+    <string name="problem_title_processing_error">处理命令返回错误</string>
+    <string name="problem_title_processing_reported_failure">处理方式返回了失败结果</string>
+    <string name="problem_title_body_too_short">文章正文过短</string>
+
+    <string name="action_manual_verification_1">请在受管浏览器中打开文章并完成验证。</string>
+    <string name="action_manual_verification_2">验证完成后，再重新提交任务。</string>
+    <string name="action_profile_revalidation_1">请在受管浏览器 profile 中重新打开这篇文章。</string>
+    <string name="action_profile_revalidation_2">重新完成验证或登录后，再重试任务。</string>
+    <string name="action_wechat_parameter_error_1">请回到原始文章页面，重新分享原始链接。</string>
+    <string name="action_wechat_parameter_error_2">重新提交时尽量避免使用已失效或被缩短的分享页。</string>
+    <string name="action_body_too_short_1">请先在受管浏览器中打开文章，并确认正文已完整加载。</string>
+    <string name="action_body_too_short_2">正文可见后，再重新重试任务。</string>
+    <string name="action_session_locked_1">请等待当前任务结束，让转发服务自动重试。</string>
+    <string name="action_session_locked_2">尽量避免同时对同一个目标发起多条任务。</string>
+    <string name="action_network_error_1">请检查本机当前的网络或代理设置。</string>
+    <string name="action_network_error_2">网络恢复稳定后，再重试任务。</string>
+    <string name="action_auth_error_1">请检查本地工具的登录状态或 API Key 配置。</string>
+    <string name="action_auth_error_2">先运行一次诊断，再重新重试。</string>
+    <string name="action_timeout_1">可以先重试一次，确认这次超时是否只是临时问题。</string>
+    <string name="action_timeout_2">只有在这类任务本来就会运行更久时，才建议调大超时时间。</string>
+    <string name="action_start_failed_1">请检查命令路径和本地工具安装是否正确。</string>
+    <string name="action_start_failed_2">可先打开诊断页或运行 relay doctor 确认环境。</string>
+    <string name="action_command_not_found_1">请到设置里填写正确的命令路径。</string>
+    <string name="action_command_not_found_2">如果只是做冒烟测试，可以改用模拟处理方式或命令处理方式。</string>
+    <string name="action_command_not_configured_1">请到设置中补充一条可信的命令模板。</string>
+    <string name="action_command_not_configured_2">如果暂时不打算用自定义命令，可以切换到其他处理方式。</string>
+    <string name="action_nonzero_exit_1">请打开任务文件，检查 stdout.txt 和 stderr.txt。</string>
+    <string name="action_nonzero_exit_2">修正底层命令错误后，再重试任务。</string>
+    <string name="action_reported_failure_1">请先查看结果摘要和任务文件，确认失败原因。</string>
+    <string name="action_reported_failure_2">只有确认原因是临时问题或已经修正后，再重试任务。</string>
+    <string name="action_completed_1">如果你需要完整输出，可以查看结果摘要或任务文件。</string>
+    <string name="action_completed_2">如果还要继续处理，可以按当前设置再次提交任务。</string>
+    <string name="action_cancelled_1">如果你想确认任务停在了哪一步，可以打开任务详情查看。</string>
+    <string name="action_cancelled_2">准备好之后，可以重新提交这条任务。</string>
+    <string name="action_running_1">请等待当前步骤完成；如果不再需要这条任务，也可以直接中断。</string>
+    <string name="action_failed_1">请先打开任务文件或诊断摘要，查看更详细的原因。</string>
+    <string name="action_failed_2">确认可能原因后，再决定是否重试。</string>
+
+    <string name="timeline_label_queued">已排队</string>
+    <string name="timeline_label_preparing">准备任务</string>
+    <string name="timeline_label_opening_browser">打开浏览器</string>
+    <string name="timeline_label_running_executor">运行处理方式</string>
+    <string name="timeline_label_finalizing">整理结果</string>
+    <string name="timeline_label_completed">已完成</string>
+    <string name="timeline_label_failed">已失败</string>
+    <string name="timeline_label_cancelled">已中断</string>
+    <string name="timeline_label_cancelling">已请求中断</string>
+
+    <string name="summary_highlights">要点：</string>
+    <string name="summary_topic">主题： </string>
+    <string name="summary_takeaway">结论： </string>
+    <string name="summary_note">说明： </string>
+    <string name="summary_paper">论文： </string>
+    <string name="summary_possible">可能相关： </string>
+    <string name="summary_link_processed">链接已处理完成。</string>
+    <string name="summary_no_explicit_papers">未发现文中明确提到的论文。</string>
+    <string name="summary_no_related_papers">未发现明显相关的论文。</string>
+    <string name="summary_found_explicit_papers">发现 %1$d 篇文中明确提到的论文。</string>
+    <string name="summary_possible_papers_detected">未发现文中明确提到的论文，但识别到 %1$d 篇可能相关的论文。</string>
+
+    <string name="task_flow_close">关闭</string>
+</resources>

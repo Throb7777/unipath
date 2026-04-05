@@ -16,7 +16,14 @@
 
     <string name="main_summary">接收分享链接，并交给转发服务继续处理。</string>
     <string name="main_relay_label">转发服务</string>
-    <string name="main_mode_label">当前模式</string>
+    <string name="main_mode_label">当前处理模式</string>
+    <string name="main_config_not_set">尚未设置</string>
+    <string name="main_relay_not_set_hint">请先到设置中填写转发服务地址。</string>
+    <string name="main_relay_emulator_hint">提示：如果你使用的是 Android 模拟器，通常可以填写 http://10.0.2.2:8080 。</string>
+    <string name="main_relay_saved_hint">你可以随时在设置里修改这个地址。</string>
+    <string name="main_relay_connected_hint">最近一次已连接到 %1$s 。</string>
+    <string name="main_mode_not_set_hint">请先在设置里测试连接，再选择处理模式。</string>
+    <string name="main_mode_saved_hint">你可以随时在设置里修改默认处理模式。</string>
     <string name="main_recent_label">近期任务</string>
     <string name="main_recent_hint">这里只保留最近 20 条任务。</string>
     <string name="main_no_tasks_hint">分享一篇文章过来后，这里会显示近期任务。</string>
@@ -100,6 +107,10 @@
     <string name="source_wechat">公众号</string>
     <string name="source_xiaohongshu">小红书</string>
     <string name="source_unknown">未知</string>
+
+    <string name="mode_label_paper_harvest">论文提取</string>
+    <string name="mode_label_paper_harvest_relaxed">论文提取（宽松）</string>
+    <string name="mode_label_link_only">仅处理链接</string>
 
     <string name="task_message_default">正在等待转发服务返回结果。</string>
 

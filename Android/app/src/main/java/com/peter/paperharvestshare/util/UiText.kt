@@ -6,6 +6,19 @@ import com.peter.paperharvestshare.model.SourceType
 import com.peter.paperharvestshare.model.TaskState
 
 object UiText {
+    fun processingModeLabel(context: Context, modeId: String, rawLabel: String? = null): String {
+        val label = rawLabel.orEmpty().trim()
+        if (label.isNotBlank() && label != modeId) {
+            return label
+        }
+        return when (modeId.trim()) {
+            "paper_harvest_v1" -> context.getString(R.string.mode_label_paper_harvest)
+            "paper_harvest_relaxed_v1" -> context.getString(R.string.mode_label_paper_harvest_relaxed)
+            "link_only_v1" -> context.getString(R.string.mode_label_link_only)
+            else -> label.ifBlank { modeId }
+        }
+    }
+
     fun sourceLabel(context: Context, sourceType: SourceType): String =
         when (sourceType) {
             SourceType.WECHAT_ARTICLE -> context.getString(R.string.source_wechat)

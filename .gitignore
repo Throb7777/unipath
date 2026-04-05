@@ -20,6 +20,9 @@ relay/relay/runtime*/
 
 # Android local files
 Android/local.properties
+Android/keystore.properties
+Android/*.keystore
+Android/*.jks
 Android/.gradle/
 Android/.idea/
 Android/.kotlin/

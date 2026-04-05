@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -9,6 +11,23 @@ val relayAuthToken = providers.gradleProperty("relayAuthToken")
     .orElse("")
 val relayMode = providers.gradleProperty("relayMode")
     .orElse("paper_harvest_v1")
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+val isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("Release", ignoreCase = true)
+}
+
+if (hasReleaseKeystore) {
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
+}
+
+if (isReleaseTaskRequested && !hasReleaseKeystore) {
+    error(
+        "Missing Android/keystore.properties. Copy Android/keystore.properties.example " +
+            "to Android/keystore.properties and fill in your release signing values first.",
+    )
+}
 
 android {
     namespace = "com.peter.paperharvestshare"
@@ -19,7 +38,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
         buildConfigField("String", "RELAY_BASE_URL", "\"${relayBaseUrl.get().trimEnd('/')}\"")
         buildConfigField("String", "RELAY_AUTH_TOKEN", "\"${relayAuthToken.get()}\"")
         buildConfigField("String", "RELAY_MODE", "\"${relayMode.get()}\"")
@@ -30,9 +49,27 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                val storeFileValue = keystoreProperties.getProperty("storeFile")?.trim().orEmpty()
+                check(storeFileValue.isNotEmpty()) {
+                    "Android/keystore.properties is missing storeFile."
+                }
+                storeFile = rootProject.file(storeFileValue)
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

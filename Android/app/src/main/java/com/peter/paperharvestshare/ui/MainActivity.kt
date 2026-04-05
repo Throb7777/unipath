@@ -88,16 +88,70 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderCurrentConfig() {
-        val relayBaseUrl = settingsStore.currentRelayBaseUrl()
-        val modeSummary = settingsStore.selectedModeSummary()
-        val renderKey = "$relayBaseUrl\n$modeSummary"
+        val relayDisplay = buildRelayDisplay()
+        val modeDisplay = buildModeDisplay()
+        val renderKey = listOf(
+            relayDisplay.title,
+            relayDisplay.hint,
+            modeDisplay.title,
+            modeDisplay.hint,
+        ).joinToString("\n")
         if (renderKey == lastConfigRenderKey) {
             return
         }
 
-        binding.relayValueText.text = relayBaseUrl
-        binding.modeValueText.text = modeSummary
+        binding.relayValueText.text = relayDisplay.title
+        binding.relayHintText.text = relayDisplay.hint
+        binding.modeValueText.text = modeDisplay.title
+        binding.modeHintText.text = modeDisplay.hint
         lastConfigRenderKey = renderKey
+    }
+
+    private fun buildRelayDisplay(): ConfigDisplay {
+        if (!settingsStore.hasSavedRelayBaseUrl()) {
+            val hint = buildString {
+                append(getString(R.string.main_relay_not_set_hint))
+                if (settingsStore.currentRelayBaseUrl().startsWith("http://10.0.2.2")) {
+                    append("\n")
+                    append(getString(R.string.main_relay_emulator_hint))
+                }
+            }
+            return ConfigDisplay(
+                title = getString(R.string.main_config_not_set),
+                hint = hint,
+            )
+        }
+
+        val hint = settingsStore.lastServiceSummary()?.let {
+            getString(R.string.main_relay_connected_hint, it)
+        } ?: getString(R.string.main_relay_saved_hint)
+        return ConfigDisplay(
+            title = settingsStore.currentRelayBaseUrl(),
+            hint = hint,
+        )
+    }
+
+    private fun buildModeDisplay(): ConfigDisplay {
+        if (!settingsStore.hasSavedModeSelection()) {
+            return ConfigDisplay(
+                title = getString(R.string.main_config_not_set),
+                hint = getString(R.string.main_mode_not_set_hint),
+            )
+        }
+
+        val modeLabel = UiText.processingModeLabel(
+            this,
+            settingsStore.selectedModeId(),
+            settingsStore.selectedModeLabel(),
+        )
+        val modeHint = settingsStore.selectedModeDescription()
+            ?.takeIf { it.isNotBlank() }
+            ?: getString(R.string.main_mode_saved_hint)
+
+        return ConfigDisplay(
+            title = modeLabel,
+            hint = modeHint,
+        )
     }
 
     private fun renderRecentTasks() {
@@ -410,5 +464,10 @@ class MainActivity : AppCompatActivity() {
         private const val RECENT_SYNC_ACTIVE_LIMIT = 5
         private val TIMELINE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     }
+
+    private data class ConfigDisplay(
+        val title: String,
+        val hint: String,
+    )
 }
 

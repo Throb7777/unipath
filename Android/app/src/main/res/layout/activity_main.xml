@@ -89,6 +89,15 @@
                     android:textColor="@color/text_primary"
                     tools:text="http://10.0.2.2:8080" />
 
+                <TextView
+                    android:id="@+id/relayHintText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Open Settings to enter the forwarding service address." />
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -112,6 +121,15 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
                     android:textColor="@color/text_primary"
                     tools:text="paper_harvest_v1" />
+
+                <TextView
+                    android:id="@+id/modeHintText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Test Connection in Settings first, then choose a mode." />
             </LinearLayout>
 
             <LinearLayout

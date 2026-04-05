@@ -28,10 +28,16 @@ class RelaySettingsStore(context: Context) {
                 .ifBlank { BuildConfig.RELAY_BASE_URL },
         )
 
+    fun hasSavedRelayBaseUrl(): Boolean =
+        prefs.contains(KEY_RELAY_BASE_URL)
+
     fun selectedModeId(): String =
         prefs.getString(KEY_SELECTED_MODE_ID, BuildConfig.RELAY_MODE)
             .orEmpty()
             .ifBlank { BuildConfig.RELAY_MODE }
+
+    fun hasSavedModeSelection(): Boolean =
+        prefs.contains(KEY_SELECTED_MODE_ID)
 
     fun selectedModeLabel(): String =
         prefs.getString(KEY_SELECTED_MODE_LABEL, selectedModeId())
@@ -92,9 +98,9 @@ class RelaySettingsStore(context: Context) {
 
     fun restoreDefaults() {
         prefs.edit()
-            .putString(KEY_RELAY_BASE_URL, normalizeBaseUrl(BuildConfig.RELAY_BASE_URL))
-            .putString(KEY_SELECTED_MODE_ID, BuildConfig.RELAY_MODE)
-            .putString(KEY_SELECTED_MODE_LABEL, BuildConfig.RELAY_MODE)
+            .remove(KEY_RELAY_BASE_URL)
+            .remove(KEY_SELECTED_MODE_ID)
+            .remove(KEY_SELECTED_MODE_LABEL)
             .remove(KEY_SELECTED_MODE_DESCRIPTION)
             .remove(KEY_LAST_SERVICE_NAME)
             .remove(KEY_LAST_SERVICE_VERSION)

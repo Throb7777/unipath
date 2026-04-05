@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PaperHarvestShare"
+rootProject.name = "UniPATH"
 include(":app")

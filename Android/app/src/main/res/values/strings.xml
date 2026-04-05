@@ -16,7 +16,14 @@
 
     <string name="main_summary">Receive a shared link and send it to the forwarding service.</string>
     <string name="main_relay_label">Forwarding Service</string>
-    <string name="main_mode_label">Current Mode</string>
+    <string name="main_mode_label">Current Processing Mode</string>
+    <string name="main_config_not_set">Not set yet</string>
+    <string name="main_relay_not_set_hint">Open Settings to enter the forwarding service address.</string>
+    <string name="main_relay_emulator_hint">Tip: Android Emulator usually uses http://10.0.2.2:8080 to reach your computer.</string>
+    <string name="main_relay_saved_hint">You can change this address in Settings.</string>
+    <string name="main_relay_connected_hint">Last checked with %1$s.</string>
+    <string name="main_mode_not_set_hint">Test the connection in Settings first, then choose a mode.</string>
+    <string name="main_mode_saved_hint">You can change the default mode in Settings.</string>
     <string name="main_recent_label">Recent Tasks</string>
     <string name="main_recent_hint">Only the latest 20 tasks are kept.</string>
     <string name="main_no_tasks_hint">Share an article here and recent tasks will appear.</string>
@@ -100,6 +107,10 @@
     <string name="source_wechat">WeChat</string>
     <string name="source_xiaohongshu">Xiaohongshu</string>
     <string name="source_unknown">Unknown</string>
+
+    <string name="mode_label_paper_harvest">Paper Harvest</string>
+    <string name="mode_label_paper_harvest_relaxed">Paper Harvest (Relaxed)</string>
+    <string name="mode_label_link_only">Link Only</string>
 
     <string name="task_message_default">Waiting for the forwarding service response.</string>
 

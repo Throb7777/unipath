@@ -10,6 +10,37 @@
 >
 > A local companion workflow for sending shared links from Android to a local Forwarding Service, then processing them with OpenClaw or another Processing Method.
 
+## 📦 APK Download
+
+Want to install UniPATH on Android first?
+
+- Download the APK from the [latest GitHub Release](https://github.com/Throb7777/unipath/releases/latest)
+- File name: `UniPATH-v1.0.0.apk`
+
+If you want the Android setup steps first, see [Android/README.md](./Android/README.md).
+
+## 🔄 Example Workflow
+
+One common workflow looks like this:
+
+1. You find a useful article in WeChat or Zhihu.
+2. You share it to **UniPATH** on Android.
+3. UniPATH sends the task to your local **Forwarding Service**.
+4. The local service runs **OpenClaw** to fetch, read, organize, and save the task result.
+5. You review the result from Android, the Relay Web UI, or the CLI.
+
+Example flow:
+
+```text
+WeChat / Zhihu
+  -> UniPATH Android app
+  -> Local Forwarding Service
+  -> OpenClaw
+  -> Android / Web UI / CLI result review
+```
+
+This is one typical workflow, not the only one. UniPATH can also be used for other share-to-local processing tasks.
+
 ## 🌟 What This Project Is
 
 This repository contains two parts that work together:

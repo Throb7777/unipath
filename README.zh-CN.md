@@ -10,6 +10,37 @@
 >
 > 一个本地协同方案：把 Android 上分享的链接交给本机的转发服务，再由 OpenClaw 或其他处理方式继续处理。
 
+## 📦 APK 下载
+
+如果你想先把 UniPATH 安装到 Android 设备上：
+
+- 请前往[最新 GitHub Release](https://github.com/Throb7777/unipath/releases/latest) 下载 APK
+- 文件名：`UniPATH-v1.0.0.apk`
+
+如果你想先看 Android 安装和配置步骤，请查看 [Android/README.zh-CN.md](./Android/README.zh-CN.md)。
+
+## 🔄 示例工作流
+
+一个常见用法如下：
+
+1. 你在微信或知乎里看到一篇值得处理的文章。
+2. 把它分享到 Android 端的 **UniPATH**。
+3. UniPATH 会把任务发送到你本机上的 **转发服务**。
+4. 本地服务再用 **OpenClaw** 执行抓取、阅读、整理和保存。
+5. 之后你可以在 Android、Relay Web UI 或 CLI 里查看结果。
+
+示例流程：
+
+```text
+微信 / 知乎
+  -> UniPATH Android 应用
+  -> 本地转发服务
+  -> OpenClaw
+  -> Android / Web UI / CLI 查看结果
+```
+
+这只是一个典型示例，不是唯一用法。UniPATH 也适用于其他“从手机分享到本地处理”的任务流。
+
 ## 🌟 这是什么项目
 
 这个仓库包含两个会一起工作的部分：

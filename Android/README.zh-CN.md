@@ -1,4 +1,10 @@
+<p align="right">
+  🌐 <a href="./README.md">English</a> · <strong>简体中文</strong>
+</p>
+
 # UniPATH Android
+
+> 查看英文版：[README.md](./README.md)
 
 > 这是 UniPATH 的 Android 应用。它负责接收分享链接，把任务提交给本地转发服务，并把任务状态再展示给用户。
 

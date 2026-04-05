@@ -1,4 +1,10 @@
+<p align="right">
+  🌐 <a href="./README.md">English</a> · <strong>简体中文</strong>
+</p>
+
 # UniPATH
+
+> 查看英文版：[README.md](./README.md)
 
 > UniPATH: Unified Phone Action Task Hub
 >

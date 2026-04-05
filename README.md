@@ -1,4 +1,10 @@
+<p align="right">
+  🌐 <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a>
+</p>
+
 # UniPATH
+
+> Looking for Chinese? See [README.zh-CN.md](./README.zh-CN.md).
 
 > UniPATH: Unified Phone Action Task Hub
 >

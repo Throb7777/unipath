@@ -1,4 +1,10 @@
+<p align="right">
+  🌐 <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a>
+</p>
+
 # UniPATH Android
+
+> Looking for Chinese? See [README.zh-CN.md](./README.zh-CN.md).
 
 > The Android app for UniPATH. It receives shared links, submits them to the local Forwarding Service, and shows task status back to the user.
 

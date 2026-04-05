@@ -1,4 +1,10 @@
+<p align="right">
+  🌐 <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a>
+</p>
+
 # UniPATH Forwarding Service
+
+> Looking for Chinese? See [README.zh-CN.md](./README.zh-CN.md).
 
 > The local Forwarding Service used by UniPATH. It receives tasks, runs a Processing Method, stores task status, and provides a Web UI and diagnostics.
 

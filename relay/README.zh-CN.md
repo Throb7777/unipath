@@ -1,4 +1,10 @@
+<p align="right">
+  🌐 <a href="./README.md">English</a> · <strong>简体中文</strong>
+</p>
+
 # UniPATH 转发服务
+
+> 查看英文版：[README.md](./README.md)
 
 > 这是 UniPATH 配套使用的本地转发服务。它负责接收任务、调用处理方式、保存任务状态，并提供 Web UI 与诊断能力。
 

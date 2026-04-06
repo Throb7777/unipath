@@ -315,6 +315,30 @@ Examples:
   - `http://10.0.2.2:8080`
 - physical phone to a local machine:
   - `http://<your-lan-ip>:8080`
+- physical phone to a machine on another network:
+  - `http://<your-tailscale-or-zerotier-ip>:8080`
+
+## 🌐 Private-Network Relay Access
+
+If you want the Android phone and the relay machine to work across different networks, keep the existing UniPATH workflow and expose relay through a private network address.
+
+Recommended path:
+
+1. Install Tailscale on the relay machine
+2. Install Tailscale on the Android phone
+3. Sign in to the same Tailscale account on both devices
+4. Start relay with a reachable bind such as `0.0.0.0:8080`
+5. Set a non-empty `AUTH_TOKEN`
+6. Find the relay machine's Tailscale address
+7. In UniPATH Android, choose **Private Network**
+8. Enter `http://<your-tailscale-ip>:8080`
+9. Tap **Test Connection**
+
+Important:
+
+- `0.0.0.0` is only the relay bind address. The Android app must use a real LAN or private-network address.
+- `localhost` and `127.0.0.1` are local-only addresses and will not work from another device.
+- ZeroTier or another equivalent private network tool can be used in the same way.
 
 ## ✅ Verification
 

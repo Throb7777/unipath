@@ -4,6 +4,23 @@
 
 # UniPATH
 
+## 🌐 连接方式
+
+UniPATH 现在正式支持 3 种常见连接方式：
+
+1. Android 模拟器
+   - `http://10.0.2.2:8080`
+2. 同一局域网 / 同一 Wi‑Fi
+   - `http://<你的局域网 IP>:8080`
+3. 不同网络 / 私网访问
+   - `http://<你的 Tailscale 或 ZeroTier 地址>:8080`
+
+请注意：
+
+- `0.0.0.0:8080` 只是 relay 的监听方式，不是手机里应填写的访问地址。
+- 如果你在真机上异网使用 UniPATH，推荐优先使用 Tailscale 或 ZeroTier 这类私网地址。
+- 如果 relay 需要被其他设备访问，建议同时启用 `AUTH_TOKEN`。
+
 > 查看英文版：[README.md](./README.md)
 
 > UniPATH: Unified Phone Action Task Hub

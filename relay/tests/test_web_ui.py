@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -22,11 +23,11 @@ def make_bootstrap(root: Path) -> BootstrapSettings:
         directory.mkdir(parents=True, exist_ok=True)
 
     return BootstrapSettings(
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=18080,
-        auth_token="",
+        auth_token="ui-test-token",
         service_name="Relay UI Test",
-        service_version="0.1.0",
+        service_version="1.0.0",
         workspace_dir=workspace_dir,
         data_dir=data_dir,
         tasks_dir=tasks_dir,
@@ -88,6 +89,31 @@ class WebUiTests(unittest.TestCase):
             self.assertIn("Basic settings", settings_page.text)
             self.assertIn("Task defaults", settings_page.text)
             self.assertIn("Recommended when you want full article extraction.", settings_page.text)
+
+    def test_web_ui_index_surfaces_lan_and_private_addresses(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            bootstrap = make_bootstrap(Path(tempdir))
+            client = TestClient(create_app(bootstrap))
+
+            with patch(
+                "app.web.routes.build_connection_hints",
+                return_value={
+                    "local": "http://127.0.0.1:18080",
+                    "android_emulator": "http://10.0.2.2:18080",
+                    "bind": "http://<your-computer-ip>:18080",
+                    "lan": ["http://192.168.1.23:18080"],
+                    "private": ["http://100.101.102.103:18080"],
+                    "public": "https://relay.example.com",
+                },
+            ):
+                index = client.get("/ui")
+
+            self.assertEqual(index.status_code, 200)
+            self.assertIn("Local network", index.text)
+            self.assertIn("http://192.168.1.23:18080", index.text)
+            self.assertIn("Private network", index.text)
+            self.assertIn("http://100.101.102.103:18080", index.text)
+            self.assertIn("https://relay.example.com", index.text)
 
             save = client.post(
                 "/ui/settings",
@@ -188,6 +214,84 @@ class WebUiTests(unittest.TestCase):
             self.assertIn("Settings saved", save_test.text)
             self.assertIn("Processing method test:", save_test.text)
 
+    def test_web_ui_custom_mode_save_and_test(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            bootstrap = make_bootstrap(Path(tempdir))
+            client = TestClient(create_app(bootstrap))
+
+            save_mode = client.post(
+                "/ui/settings",
+                data={
+                    "_action": "save_custom_mode",
+                    "custom_mode_label": "Save Article",
+                    "custom_mode_id": "custom_save_article",
+                    "custom_mode_description": "Run a local article saver.",
+                    "custom_mode_shell_command_template": "echo {normalized_url}",
+                    "custom_mode_timeout_seconds": "45",
+                },
+                follow_redirects=True,
+            )
+            self.assertEqual(save_mode.status_code, 200)
+            self.assertIn("Settings saved", save_mode.text)
+
+            app_runtime = client.app.state.runtime
+            self.assertEqual(len(app_runtime.runtime_config.custom_modes), 1)
+            self.assertEqual(app_runtime.runtime_config.custom_modes[0].id, "custom_save_article")
+
+            test_mode = client.post(
+                "/ui/settings",
+                data={
+                    "_action": "test_custom_mode",
+                    "custom_mode_original_id": "custom_save_article",
+                    "custom_mode_label": "Save Article",
+                    "custom_mode_id": "custom_save_article",
+                    "custom_mode_description": "Run a local article saver.",
+                    "custom_mode_shell_command_template": "echo {normalized_url}",
+                    "custom_mode_timeout_seconds": "45",
+                    "custom_mode_sample_url": "https://example.com/article",
+                    "custom_mode_sample_source": "unknown",
+                    "custom_mode_sample_text": "hello",
+                },
+            )
+            self.assertEqual(test_mode.status_code, 200)
+            self.assertIn("Mode test", test_mode.text)
+            self.assertIn("Save Article", test_mode.text)
+            self.assertIn("Rendered command preview", test_mode.text)
+            self.assertIn("echo https://example.com/article", test_mode.text)
+
+            duplicate_mode = client.post(
+                "/ui/settings",
+                data={
+                    "_action": "duplicate_custom_mode",
+                    "custom_mode_original_id": "custom_save_article",
+                    "custom_mode_id": "custom_save_article",
+                },
+                follow_redirects=True,
+            )
+            self.assertEqual(duplicate_mode.status_code, 200)
+            self.assertIn("Settings saved", duplicate_mode.text)
+            self.assertEqual(len(app_runtime.runtime_config.custom_modes), 2)
+            self.assertEqual(app_runtime.runtime_config.custom_modes[1].label, "Save Article Copy")
+
+    def test_web_ui_custom_mode_rejects_built_in_id_collision(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            bootstrap = make_bootstrap(Path(tempdir))
+            client = TestClient(create_app(bootstrap))
+
+            response = client.post(
+                "/ui/settings",
+                data={
+                    "_action": "save_custom_mode",
+                    "custom_mode_label": "Bad Collision",
+                    "custom_mode_id": "link_only_v1",
+                    "custom_mode_description": "Should fail.",
+                    "custom_mode_shell_command_template": "echo {normalized_url}",
+                    "custom_mode_timeout_seconds": "45",
+                },
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("cannot reuse a built-in mode id", response.text)
+
     def test_web_ui_tasks_and_detail(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             bootstrap = make_bootstrap(Path(tempdir))
@@ -280,6 +384,17 @@ class WebUiTests(unittest.TestCase):
             self.assertEqual(diagnostics.status_code, 200)
             self.assertIn("Processing command was not found", diagnostics.text)
             self.assertIn("Set the correct command path in Settings.", diagnostics.text)
+
+    def test_web_ui_diagnostics_surfaces_private_access_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            base_bootstrap = make_bootstrap(Path(tempdir))
+            bootstrap = replace(base_bootstrap, host="127.0.0.1", auth_token="")
+            client = TestClient(create_app(bootstrap))
+
+            diagnostics = client.get("/ui/diagnostics")
+            self.assertEqual(diagnostics.status_code, 200)
+            self.assertIn("Remote or private-network access is not ready", diagnostics.text)
+            self.assertIn("Set HOST=0.0.0.0 or another reachable interface", diagnostics.text)
 
     def test_web_ui_language_switch_to_chinese(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

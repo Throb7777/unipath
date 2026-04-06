@@ -4,6 +4,26 @@
 
 # UniPATH Android
 
+## 🌐 异网使用 UniPATH
+
+如果手机和电脑不在同一个普通 Wi‑Fi 下，推荐使用 Tailscale 或 ZeroTier 这样的私网工具。
+
+按这个顺序配置：
+
+1. 在电脑上安装 Tailscale（或 ZeroTier），并登录同一账号/网络。
+2. 在手机上安装 Tailscale（或 ZeroTier），并确认连接状态正常。
+3. 在电脑上启动 relay，并让它监听 `0.0.0.0:8080`。
+4. 打开 Tailscale，找到电脑的私网地址，例如 `100.x.x.x`。
+5. 在 UniPATH 的 **Settings** 里把连接类型切到 **Private Network**。
+6. 填入 `http://<你的 Tailscale 地址>:8080`。
+7. 点击 **Test Connection**，成功后再保存设置。
+
+补充说明：
+
+- Tailscale / ZeroTier 默认不会影响手机正常上网。
+- 只有在你启用了 Exit Node、全局代理或全量流量转发时，手机上网路径才会发生明显变化。
+- 不要在手机里填写 `0.0.0.0`、`localhost` 或 `127.0.0.1`。
+
 > 查看英文版：[README.md](./README.md)
 
 > 这是 UniPATH 的 Android 应用。它负责接收分享链接，把任务提交给本地转发服务，并把任务状态再展示给用户。

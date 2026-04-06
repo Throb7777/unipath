@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -8,6 +9,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from app.config import CustomModeRuntimeConfig
+from app.modes import list_client_modes
 from app.runtime_state import AppRuntime
 from app.web.i18n import make_translator, normalize_lang, page_url, resolve_lang, switch_lang_url
 from app.web.view_models import (
@@ -44,6 +47,24 @@ def create_web_router(runtime: AppRuntime) -> APIRouter:
         lang = resolve_lang(request)
         t = make_translator(lang)
         health = runtime.health_snapshot()
+        connection_hints = build_connection_hints(
+            runtime.bootstrap.host,
+            runtime.bootstrap.port,
+            runtime.settings.public_relay_url,
+        )
+        remote_access_banner = None
+        if runtime.bootstrap.host not in {"127.0.0.1", "localhost", "::1"} and not health.get("authConfigured"):
+            remote_access_banner = {
+                "tone": "warn",
+                "title": t("overview.remote_warn_title"),
+                "body": t("overview.remote_warn_body"),
+            }
+        elif (connection_hints.get("private") or connection_hints.get("public")) and health.get("authConfigured"):
+            remote_access_banner = {
+                "tone": "ok",
+                "title": t("overview.remote_ready_title"),
+                "body": t("overview.remote_ready_body"),
+            }
 
         def local_page_url(path: str, **params):
             return page_url(path, lang, **params)
@@ -56,7 +77,8 @@ def create_web_router(runtime: AppRuntime) -> APIRouter:
             "page_url": local_page_url,
             "switch_lang_url": lambda target_lang: switch_lang_url(request, target_lang),
             "service_name": runtime.bootstrap.service_name,
-            "connection_hints": build_connection_hints(runtime.bootstrap.host, runtime.bootstrap.port),
+            "connection_hints": connection_hints,
+            "remote_access_banner": remote_access_banner,
             "layout_health": health,
             "format_duration_ms": lambda duration_ms: format_duration_ms(duration_ms, lang=lang),
             "format_iso_local": format_iso_local,
@@ -65,19 +87,24 @@ def create_web_router(runtime: AppRuntime) -> APIRouter:
 
     def _settings_context(request: Request, *, saved: bool = False, error: str = "", test_result: dict | None = None, submitted_config=None):
         health = runtime.health_snapshot()
+        runtime_config = submitted_config or runtime.runtime_config
+        modes = list_client_modes(runtime_config.custom_modes)
         return _base_context(
             request,
             page="settings",
             health=health,
-            runtime_config=submitted_config or runtime.runtime_config,
+            runtime_config=runtime_config,
             runtime_payload=runtime.config_store.current_payload(),
             runtime_metadata=runtime.config_metadata(),
-            modes=runtime.client_config().modes,
+            modes=modes,
+            built_in_modes=[mode for mode in modes if not mode.get("isCustom")],
+            custom_modes=runtime_config.custom_modes,
             executors=health["availableExecutors"],
             executor_healths=runtime.executor_healths(),
             saved=saved,
             error=error,
             test_result=test_result,
+            mode_test_result=test_result if test_result and test_result.get("modeId") else None,
         )
 
     def _parse_settings_form(form: dict[str, list[str]]) -> dict:
@@ -116,6 +143,101 @@ def create_web_router(runtime: AppRuntime) -> APIRouter:
             },
         }
 
+    def _slugify_custom_mode_id(label: str) -> str:
+        slug = re.sub(r"[^a-z0-9]+", "_", label.strip().lower()).strip("_")
+        slug = slug or "mode"
+        return f"custom_{slug}"
+
+    def _validate_custom_mode(existing_modes: tuple[CustomModeRuntimeConfig, ...], *, original_id: str, custom_mode: CustomModeRuntimeConfig) -> None:
+        built_in_mode_ids = {mode["id"] for mode in list_client_modes() if not mode.get("isCustom")}
+        if custom_mode.id in built_in_mode_ids:
+            raise ValueError("Custom mode id cannot reuse a built-in mode id.")
+        if not re.fullmatch(r"custom_[a-z0-9_]{2,64}", custom_mode.id):
+            raise ValueError("Custom mode id must stay lowercase and match custom_[a-z0-9_]+.")
+        for mode in existing_modes:
+            if mode.id == custom_mode.id and mode.id != original_id:
+                raise ValueError("Custom mode id is already being used by another saved custom mode.")
+        if not custom_mode.shell_command_template.strip():
+            raise ValueError("Custom mode template must not be empty.")
+        if custom_mode.timeout_seconds <= 0:
+            raise ValueError("Custom mode timeout must be a positive integer.")
+
+    def _duplicate_custom_mode(existing_modes: tuple[CustomModeRuntimeConfig, ...], mode_id: str) -> CustomModeRuntimeConfig:
+        source = next((mode for mode in existing_modes if mode.id == mode_id), None)
+        if source is None:
+            raise ValueError("Custom mode was not found.")
+        base_label = source.label.strip() or "Copied Mode"
+        base_id = _slugify_custom_mode_id(f"{base_label} copy")
+        candidate_id = base_id
+        counter = 2
+        existing_ids = {mode.id for mode in existing_modes}
+        while candidate_id in existing_ids:
+            candidate_id = f"{base_id}_{counter}"
+            counter += 1
+        return replace(
+            source,
+            id=candidate_id,
+            label=f"{base_label} Copy",
+        )
+
+    def _parse_custom_mode_form(form: dict[str, list[str]]) -> tuple[str, CustomModeRuntimeConfig, str, str, str]:
+        def one(name: str, default: str = "") -> str:
+            return form.get(name, [default])[0]
+
+        original_id = one("custom_mode_original_id").strip()
+        raw_id = one("custom_mode_id").strip().lower()
+        label = one("custom_mode_label").strip()
+        if not label:
+            raise ValueError("Custom mode name must not be empty.")
+        mode_id = raw_id or _slugify_custom_mode_id(label)
+        custom_mode = CustomModeRuntimeConfig(
+            id=mode_id,
+            label=label,
+            description=one("custom_mode_description").strip(),
+            executor_kind="shell_command",
+            shell_command_template=one("custom_mode_shell_command_template"),
+            timeout_seconds=int(one("custom_mode_timeout_seconds", "180") or "180"),
+            enabled=True,
+        )
+        return (
+            original_id,
+            custom_mode,
+            one("custom_mode_sample_url", "https://example.com/article").strip() or "https://example.com/article",
+            one("custom_mode_sample_text").strip(),
+            one("custom_mode_sample_source", "unknown").strip() or "unknown",
+        )
+
+    def _upsert_custom_mode(existing_modes: tuple[CustomModeRuntimeConfig, ...], *, original_id: str, custom_mode: CustomModeRuntimeConfig) -> tuple[CustomModeRuntimeConfig, ...]:
+        updated = []
+        replaced = False
+        for mode in existing_modes:
+            if mode.id == original_id or mode.id == custom_mode.id:
+                if not replaced:
+                    updated.append(custom_mode)
+                    replaced = True
+                continue
+            updated.append(mode)
+        if not replaced:
+            updated.append(custom_mode)
+        return tuple(updated)
+
+    def _delete_custom_mode(existing_modes: tuple[CustomModeRuntimeConfig, ...], mode_id: str) -> tuple[CustomModeRuntimeConfig, ...]:
+        return tuple(mode for mode in existing_modes if mode.id != mode_id)
+
+    def _custom_modes_payload(custom_modes: tuple[CustomModeRuntimeConfig, ...]) -> list[dict]:
+        return [
+            {
+                "id": mode.id,
+                "label": mode.label,
+                "description": mode.description,
+                "executor_kind": mode.executor_kind,
+                "shell_command_template": mode.shell_command_template,
+                "timeout_seconds": mode.timeout_seconds,
+                "enabled": mode.enabled,
+            }
+            for mode in custom_modes
+        ]
+
     @router.get("/ui", response_class=HTMLResponse)
     async def ui_index(request: Request):
         _ensure_local_access(request)
@@ -146,6 +268,49 @@ def create_web_router(runtime: AppRuntime) -> APIRouter:
         lang = normalize_lang(form.get("lang", [""])[0])
 
         try:
+            if action in {"save_custom_mode", "test_custom_mode", "delete_custom_mode", "duplicate_custom_mode"}:
+                current_config = runtime.runtime_config
+                if action == "duplicate_custom_mode":
+                    mode_id = (form.get("custom_mode_original_id", [""])[0] or form.get("custom_mode_id", [""])[0]).strip()
+                    duplicated_mode = _duplicate_custom_mode(current_config.custom_modes, mode_id)
+                    updated_modes = current_config.custom_modes + (duplicated_mode,)
+                    await runtime.update_runtime_config({"custom_modes": _custom_modes_payload(updated_modes)})
+                    return RedirectResponse(page_url("/ui/settings", lang, saved="1"), status_code=303)
+                if action == "delete_custom_mode":
+                    mode_id = (form.get("custom_mode_original_id", [""])[0] or form.get("custom_mode_id", [""])[0]).strip()
+                    updated_modes = _delete_custom_mode(current_config.custom_modes, mode_id)
+                    updates = {"custom_modes": _custom_modes_payload(updated_modes)}
+                    if current_config.default_mode == mode_id:
+                        updates["default_mode"] = "link_only_v1"
+                    await runtime.update_runtime_config(updates)
+                    return RedirectResponse(page_url("/ui/settings", lang, saved="1"), status_code=303)
+
+                original_id, custom_mode, sample_url, sample_text, sample_source = _parse_custom_mode_form(form)
+                _validate_custom_mode(current_config.custom_modes, original_id=original_id, custom_mode=custom_mode)
+                updated_modes = _upsert_custom_mode(current_config.custom_modes, original_id=original_id, custom_mode=custom_mode)
+                preview_config = replace(current_config, custom_modes=updated_modes)
+
+                if action == "test_custom_mode":
+                    preview = await runtime.test_custom_mode_preview(
+                        custom_mode,
+                        normalized_url=sample_url,
+                        raw_text=sample_text,
+                        source=sample_source,
+                    )
+                    return _template_response(
+                        request,
+                        "settings.html",
+                        _settings_context(
+                            request,
+                            saved=False,
+                            test_result=preview,
+                            submitted_config=preview_config,
+                        ),
+                    )
+
+                await runtime.update_runtime_config({"custom_modes": _custom_modes_payload(updated_modes)})
+                return RedirectResponse(page_url("/ui/settings", lang, saved="1"), status_code=303)
+
             if action == "test":
                 preview = runtime.test_runtime_config(updates)
                 return _template_response(

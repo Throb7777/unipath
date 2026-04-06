@@ -4,6 +4,7 @@ import logging
 
 from app.executors.base import ExecutorHealth
 from app.executors.common import ManagedTaskExecutor, TaskCancelledError
+from app.modes import custom_mode_ids_for_executor
 from app.models import utc_now_iso
 from app.user_facing import result_summary_for_output
 
@@ -20,18 +21,27 @@ class ShellCommandExecutor(ManagedTaskExecutor):
     display_name = "Shell Command Executor"
 
     def health(self) -> ExecutorHealth:
-        available = bool(self.settings.shell_command_template.strip())
-        message = "Shell command template is configured." if available else "SHELL_COMMAND_TEMPLATE is empty."
+        available = bool(self.settings.shell_command_template.strip()) or any(
+            mode.enabled and mode.executor_kind == self.executor_id for mode in self.settings.custom_modes
+        )
+        message = (
+            "Shell command template or at least one custom shell mode is configured."
+            if available
+            else "SHELL_COMMAND_TEMPLATE is empty and no custom shell modes are configured."
+        )
         return ExecutorHealth(
             executorId=self.executor_id,
             label=self.display_name,
             available=available,
             message=message,
-            details={"templateConfigured": available},
+            details={
+                "templateConfigured": bool(self.settings.shell_command_template.strip()),
+                "customModeCount": len(custom_mode_ids_for_executor(self.settings.custom_modes, self.executor_id)),
+            },
         )
 
     def supported_mode_ids(self) -> tuple[str, ...]:
-        return ("link_only_v1",)
+        return ("link_only_v1", *custom_mode_ids_for_executor(self.settings.custom_modes, self.executor_id))
 
     async def execute(self, task_id: str) -> None:
         task = self.store.get(task_id)
@@ -42,17 +52,19 @@ class ShellCommandExecutor(ManagedTaskExecutor):
         self._write_task_snapshot(task_dir, task)
         logger.info("task_started task_id=%s mode=%s source=%s executor=%s", task.task_id, task.mode, task.source, self.executor_id)
 
-        if not self.settings.shell_command_template.strip():
+        command_template = self._template_for_mode(task.mode)
+        timeout_seconds = self._timeout_for_mode(task.mode)
+        if not command_template.strip():
             self._mark_failed(
                 task_id,
                 task_dir,
                 error_code="executor_command_not_configured",
-                error_message="SHELL_COMMAND_TEMPLATE is empty.",
+                error_message="Shell command template is empty for the selected mode.",
                 relay_message="Shell command executor is not configured.",
             )
             return
 
-        command = self._render_command(task)
+        command = self._render_command(task, command_template)
         self._write_text(task_dir / "command.txt", command)
         self._set_status(
             task_id,
@@ -78,7 +90,7 @@ class ShellCommandExecutor(ManagedTaskExecutor):
             process = await self._run_cancellable_process(
                 command,
                 task_id=task_id,
-                timeout_seconds=self.settings.shell_command_timeout_seconds,
+                timeout_seconds=timeout_seconds,
                 shell=True,
             )
         except TaskCancelledError:
@@ -147,8 +159,7 @@ class ShellCommandExecutor(ManagedTaskExecutor):
         )
         logger.info("task_completed task_id=%s executor=%s", task_id, self.executor_id)
 
-    def _render_command(self, task) -> str:
-        template = self.settings.shell_command_template
+    def _render_command(self, task, template: str) -> str:
         context = _SafeFormatDict(
             task_id=task.task_id,
             mode=task.mode,
@@ -160,3 +171,25 @@ class ShellCommandExecutor(ManagedTaskExecutor):
             client_app_version=task.client_app_version,
         )
         return template.format_map(context)
+
+    def _custom_mode_for(self, mode_id: str):
+        return next(
+            (
+                mode
+                for mode in self.settings.custom_modes
+                if mode.enabled and mode.executor_kind == self.executor_id and mode.id == mode_id
+            ),
+            None,
+        )
+
+    def _template_for_mode(self, mode_id: str) -> str:
+        custom_mode = self._custom_mode_for(mode_id)
+        if custom_mode is not None:
+            return custom_mode.shell_command_template
+        return self.settings.shell_command_template
+
+    def _timeout_for_mode(self, mode_id: str) -> int:
+        custom_mode = self._custom_mode_for(mode_id)
+        if custom_mode is not None:
+            return custom_mode.timeout_seconds
+        return self.settings.shell_command_timeout_seconds

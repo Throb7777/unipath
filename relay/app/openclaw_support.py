@@ -67,7 +67,9 @@ def _resolve_executable(executable: str) -> str | None:
         return resolved
 
     if os.name == "nt":
-        for suffix in (".ps1", ".cmd", ".exe", ".bat"):
+        # Prefer CMD/EXE launchers for automated subprocess use on Windows.
+        # The PowerShell shim can behave differently under nested process trees.
+        for suffix in (".cmd", ".exe", ".bat", ".ps1"):
             resolved = shutil.which(f"{executable}{suffix}")
             if resolved:
                 return resolved

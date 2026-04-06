@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+import ipaddress
 from pathlib import Path
+import socket
 from typing import Iterable
 from urllib.parse import urlparse
 
@@ -361,6 +363,34 @@ def localize_dynamic_text(text: str, *, lang: str = "en") -> str:
     translated = _translate_result_summary_line(text)
     if translated != text:
         return translated
+    if text == "Remote or private-network access is not ready":
+        return "异网或私网访问尚未准备好"
+    if text == "Remote or private-network access still needs protection":
+        return "异网或私网访问仍缺少保护"
+    if text == "Remote or private-network access looks ready":
+        return "异网或私网访问看起来已经就绪"
+    if text.startswith("Relay is listening on ") and text.endswith(". Another device cannot reach this bind address yet."):
+        bind = text.removeprefix("Relay is listening on ").removesuffix(". Another device cannot reach this bind address yet.")
+        return f"relay 当前监听在 {bind}，其他设备暂时还无法访问这个地址。"
+    if text.startswith("Relay is reachable on ") and text.endswith(", but AUTH_TOKEN is still empty."):
+        bind = text.removeprefix("Relay is reachable on ").removesuffix(", but AUTH_TOKEN is still empty.")
+        return f"relay 已经可以通过 {bind} 被访问，但 AUTH_TOKEN 仍然为空。"
+    if text.startswith("Relay is reachable on ") and text.endswith(" and auth token protection is enabled."):
+        bind = text.removeprefix("Relay is reachable on ").removesuffix(" and auth token protection is enabled.")
+        return f"relay 已经可以通过 {bind} 被访问，并且认证 token 保护已启用。"
+    if text == "Set HOST=0.0.0.0 or another reachable interface before using a phone or private-network client.":
+        return "在手机或私网客户端接入前，请先把 HOST 设成 0.0.0.0 或其他可访问的接口地址。"
+    if text == "Keep AUTH_TOKEN enabled before exposing relay beyond the local machine.":
+        return "在 relay 暴露到本机以外之前，请保持 AUTH_TOKEN 已启用。"
+    if text == "Set AUTH_TOKEN before using relay from another device, a Tailscale network, or a public URL.":
+        return "在其他设备、Tailscale 网络或公网地址访问 relay 前，请先配置 AUTH_TOKEN。"
+    if text == "Retest the Android connection after saving the token and updating the app settings.":
+        return "保存 token 并更新 Android 设置后，再重新测试一次连接。"
+    if text.startswith("Relay Bind: "):
+        return f"Relay 绑定地址：{text.removeprefix('Relay Bind: ')}"
+    if text.startswith("Remote Access: "):
+        state = text.removeprefix("Remote Access: ")
+        return f"异网访问：{'已就绪' if state == 'ready' else '仍需配置' if state == 'needs setup' else state}"
     return {
         "ok": "正常",
         "warning": "警告",
@@ -489,11 +519,69 @@ def _localize_diagnostic_item(item: dict[str, object], *, lang: str = "en") -> d
     }
 
 
-def build_connection_hints(host: str, port: int) -> dict[str, str]:
+def _classify_ipv4_address(address: str) -> str:
+    try:
+        value = ipaddress.ip_address(address)
+    except ValueError:
+        return "other"
+    if not isinstance(value, ipaddress.IPv4Address):
+        return "other"
+    if value.is_loopback:
+        return "loopback"
+    if value in ipaddress.ip_network("100.64.0.0/10"):
+        return "private_network"
+    if value.is_private:
+        return "lan"
+    return "other"
+
+
+def _detect_host_ipv4_addresses() -> list[str]:
+    candidates: set[str] = set()
+    names = {
+        socket.gethostname(),
+        socket.getfqdn(),
+        "localhost",
+    }
+    for name in names:
+        if not name:
+            continue
+        try:
+            _, _, addresses = socket.gethostbyname_ex(name)
+        except OSError:
+            continue
+        for address in addresses:
+            candidates.add(address)
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("8.8.8.8", 80))
+            candidates.add(probe.getsockname()[0])
+    except OSError:
+        pass
+    return sorted(candidates)
+
+
+def _format_urls(addresses: Iterable[str], port: int) -> list[str]:
+    return [f"http://{address}:{port}" for address in addresses]
+
+
+def build_connection_hints(host: str, port: int, public_url: str = "") -> dict[str, object]:
+    detected_addresses = _detect_host_ipv4_addresses()
+    lan_addresses = [address for address in detected_addresses if _classify_ipv4_address(address) == "lan"]
+    private_addresses = [address for address in detected_addresses if _classify_ipv4_address(address) == "private_network"]
+    if host not in {"0.0.0.0", "::", "127.0.0.1", "localhost", "::1"}:
+        host_type = _classify_ipv4_address(host)
+        if host_type == "lan" and host not in lan_addresses:
+            lan_addresses.insert(0, host)
+        elif host_type == "private_network" and host not in private_addresses:
+            private_addresses.insert(0, host)
+    bind_host = "<your-computer-ip>" if host in {"0.0.0.0", "::"} else host
     return {
         "local": f"http://127.0.0.1:{port}",
         "android_emulator": f"http://10.0.2.2:{port}",
-        "bind": f"http://{host}:{port}",
+        "bind": f"http://{bind_host}:{port}",
+        "lan": _format_urls(lan_addresses, port),
+        "private": _format_urls(private_addresses, port),
+        "public": public_url.strip(),
     }
 
 

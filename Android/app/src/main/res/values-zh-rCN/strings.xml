@@ -27,7 +27,7 @@
     <string name="main_recent_label">近期任务</string>
     <string name="main_recent_hint">这里只保留最近 20 条任务。</string>
     <string name="main_no_tasks_hint">分享一篇文章过来后，这里会显示近期任务。</string>
-    <string name="recent_target_unknown">未知链接</string>
+    <string name="recent_target_unknown">分享链接</string>
     <string name="recent_status_received">已接收</string>
     <string name="recent_status_processing">处理中</string>
     <string name="recent_status_cancelling">正在中断</string>
@@ -101,12 +101,12 @@
 
     <string name="share_error_no_text">没有收到可处理的分享文本。</string>
     <string name="share_error_no_url">分享文本里没有找到 http(s) 链接。</string>
-    <string name="share_error_unsupported">目前只支持公众号文章链接和小红书链接。</string>
+    <string name="share_error_unsupported">当前分享内容里没有可处理的 http(s) 链接。</string>
     <string name="share_ready">已识别到可提交的文章链接。</string>
 
     <string name="source_wechat">公众号</string>
     <string name="source_xiaohongshu">小红书</string>
-    <string name="source_unknown">未知</string>
+    <string name="source_unknown">分享链接</string>
 
     <string name="mode_label_paper_harvest">论文提取</string>
     <string name="mode_label_paper_harvest_relaxed">论文提取（宽松）</string>
@@ -262,4 +262,29 @@
     <string name="summary_possible_papers_detected">未发现文中明确提到的论文，但识别到 %1$d 篇可能相关的论文。</string>
 
     <string name="task_flow_close">关闭</string>
+    <string name="settings_connection_type_label">连接方式</string>
+    <string name="settings_connection_type_hint">选择 Android 应用应当通过哪类地址访问 relay。</string>
+    <string name="settings_connection_type_emulator">Android 模拟器</string>
+    <string name="settings_connection_type_local">局域网</string>
+    <string name="settings_connection_type_private">私网</string>
+    <string name="settings_service_placeholder_emulator">http://10.0.2.2:8080</string>
+    <string name="settings_service_placeholder_local">http://192.168.1.12:8080</string>
+    <string name="settings_service_placeholder_private">http://100.101.102.103:8080</string>
+    <string name="settings_service_hint_emulator">当应用运行在 Android 模拟器里、relay 运行在你的电脑上时，请使用 http://10.0.2.2:8080 。</string>
+    <string name="settings_service_hint_local">当手机和电脑在同一个网络里时，请使用电脑的局域网 IP，例如 http://192.168.1.12:8080 。</string>
+    <string name="settings_service_hint_private">当手机和电脑不在同一个网络里时，请使用 Tailscale 或 ZeroTier 地址，例如 http://100.101.102.103:8080 。</string>
+    <string name="settings_service_auth_label">转发服务认证 Token</string>
+    <string name="settings_service_auth_placeholder">如果私网或公网访问需要认证，请把转发服务 token 填在这里</string>
+    <string name="settings_service_auth_hint_optional">同一局域网里通常可以留空；如果你的转发服务不要求 token，也可以保持为空。</string>
+    <string name="settings_service_auth_hint_saved">这台手机已经保存了一枚转发服务 token。请确保它和 relay 当前使用的 AUTH_TOKEN 保持一致。</string>
+    <string name="settings_service_auth_hint_private">私网 relay 通常需要和转发服务端相同的 AUTH_TOKEN。测试连接前，请先把它填在这里。</string>
+    <string name="settings_service_auth_hint_private_ready">当前私网 relay 会使用这枚已保存的转发服务 token。修改地址或 token 后，请重新测试连接。</string>
+    <string name="settings_service_hint_bind_note">0.0.0.0 只适合作为 relay 的监听地址，不能直接作为 Android 访问地址。</string>
+    <string name="settings_service_hint_loopback_note">localhost 和 127.0.0.1 只在同一台设备上有效。Android 端应使用 10.0.2.2、局域网 IP 或私网地址。</string>
+    <string name="settings_service_hint_private_with_lan">这个地址看起来仍是局域网地址。如果手机和电脑不在同一个网络，请改用 Tailscale、ZeroTier 或其他私网 relay 地址。</string>
+    <string name="settings_service_hint_local_with_private">这个地址看起来像私网地址。只要你的私网应用已经连接，它同样可以正常使用。</string>
+    <string name="settings_invalid_bind_address">0.0.0.0 只用于 relay 监听地址，请在这里填写真实可访问的 relay 地址。</string>
+    <string name="settings_invalid_loopback_address">localhost 和 127.0.0.1 只在同一台设备上有效。模拟器请用 10.0.2.2，真机请用电脑的局域网或私网 relay 地址。</string>
+    <string name="main_relay_private_hint">如果手机和电脑不在同一个网络，请填写 Tailscale、ZeroTier 或其他私网 relay 地址。</string>
+    <string name="main_relay_private_auth_hint">如果你正在使用私网 relay，请同时在设置里保存相同的 relay 认证 token，再去测试连接。</string>
 </resources>

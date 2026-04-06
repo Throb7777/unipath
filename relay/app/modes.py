@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Dict, List
+from typing import Any, Dict, Iterable, List
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,7 @@ class ModeDefinition:
     supportsBrowserPrefetch: bool = False
     preferredExecutors: tuple[str, ...] = ()
     enabled: bool = True
+    isCustom: bool = False
 
 
 MODE_REGISTRY: List[ModeDefinition] = [
@@ -52,5 +53,36 @@ MODE_REGISTRY: List[ModeDefinition] = [
 MODE_BY_ID: Dict[str, ModeDefinition] = {mode.id: mode for mode in MODE_REGISTRY}
 
 
-def list_client_modes() -> List[dict]:
-    return [asdict(mode) for mode in MODE_REGISTRY]
+def _custom_mode_to_definition(custom_mode: Any) -> ModeDefinition:
+    return ModeDefinition(
+        id=custom_mode.id,
+        label=custom_mode.label,
+        description=custom_mode.description or "User-defined shell command mode.",
+        category="custom",
+        outputKind="custom_result",
+        preferredExecutors=(custom_mode.executor_kind,),
+        enabled=bool(getattr(custom_mode, "enabled", True)),
+        isCustom=True,
+    )
+
+
+def custom_mode_ids_for_executor(custom_modes: Iterable[Any], executor_kind: str) -> tuple[str, ...]:
+    return tuple(
+        mode.id
+        for mode in custom_modes
+        if getattr(mode, "enabled", True) and getattr(mode, "executor_kind", "") == executor_kind
+    )
+
+
+def mode_registry(custom_modes: Iterable[Any] = ()) -> List[ModeDefinition]:
+    registry = list(MODE_REGISTRY)
+    registry.extend(_custom_mode_to_definition(mode) for mode in custom_modes if getattr(mode, "enabled", True))
+    return registry
+
+
+def mode_map(custom_modes: Iterable[Any] = ()) -> Dict[str, ModeDefinition]:
+    return {mode.id: mode for mode in mode_registry(custom_modes)}
+
+
+def list_client_modes(custom_modes: Iterable[Any] = ()) -> List[dict]:
+    return [asdict(mode) for mode in mode_registry(custom_modes)]

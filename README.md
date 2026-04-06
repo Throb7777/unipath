@@ -41,6 +41,28 @@ WeChat / Zhihu
 
 This is one typical workflow, not the only one. UniPATH can also be used for other share-to-local processing tasks.
 
+## 🌐 Connection Models
+
+UniPATH keeps the same workflow in each case:
+
+```text
+Android app
+  -> Forwarding Service
+  -> Processing Method
+  -> Result Summary
+```
+
+The only thing that changes is the address you enter in **Settings**.
+
+- `Android Emulator`
+  - Use `http://10.0.2.2:8080`
+- `Local Network`
+  - Use your computer's LAN IP, such as `http://192.168.1.23:8080`
+- `Private Network`
+  - Use your Tailscale or ZeroTier relay address, such as `http://100.101.102.103:8080`
+
+If your phone and computer are on different networks, the recommended path is a private network address. This keeps the existing UniPATH flow unchanged and works for OpenClaw, shell-command, and future Processing Methods alike.
+
 ## 🌟 What This Project Is
 
 This repository contains two parts that work together:

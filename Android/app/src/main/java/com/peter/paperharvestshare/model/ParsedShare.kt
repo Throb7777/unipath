@@ -8,5 +8,5 @@ data class ParsedShare(
     val errorMessage: String? = null,
 ) {
     val isValid: Boolean
-        get() = normalizedUrl != null && errorMessage == null && sourceType != SourceType.UNKNOWN
+        get() = normalizedUrl != null && errorMessage == null
 }

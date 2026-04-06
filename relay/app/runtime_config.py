@@ -7,6 +7,7 @@ from typing import Any
 
 from app.config import (
     BootstrapSettings,
+    CustomModeRuntimeConfig,
     OpenClawRuntimeConfig,
     RuntimeConfig,
     ShellCommandRuntimeConfig,
@@ -111,6 +112,18 @@ class RuntimeConfigStore:
                 network_retry_base_seconds=int(
                     merged["openclaw"].get("network_retry_base_seconds", defaults["openclaw"]["network_retry_base_seconds"])
                 ),
+            ),
+            custom_modes=tuple(
+                CustomModeRuntimeConfig(
+                    id=str(item.get("id", "")).strip(),
+                    label=str(item.get("label", "")).strip(),
+                    description=str(item.get("description", "")).strip(),
+                    executor_kind=str(item.get("executor_kind", "shell_command")).strip().lower() or "shell_command",
+                    shell_command_template=str(item.get("shell_command_template", "")).strip(),
+                    timeout_seconds=int(item.get("timeout_seconds", 180)),
+                    enabled=bool(item.get("enabled", True)),
+                )
+                for item in merged.get("custom_modes", defaults.get("custom_modes", []))
             ),
         )
 

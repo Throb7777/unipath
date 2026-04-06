@@ -80,6 +80,54 @@
                     tools:text="Set the service address, test the connection, and choose a mode." />
 
                 <TextView
+                    android:id="@+id/connectionTypeLabelText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/text_primary"
+                    tools:text="Connection Type" />
+
+                <TextView
+                    android:id="@+id/connectionTypeHintText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Choose the kind of address the Android app should use to reach your relay." />
+
+                <RadioGroup
+                    android:id="@+id/connectionTypeRadioGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_panel"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <RadioButton
+                        android:id="@+id/connectionEmulatorRadio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        tools:text="Android Emulator" />
+
+                    <RadioButton
+                        android:id="@+id/connectionLocalRadio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        tools:text="Local Network" />
+
+                    <RadioButton
+                        android:id="@+id/connectionPrivateRadio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        tools:text="Private Network" />
+                </RadioGroup>
+
+                <TextView
                     android:id="@+id/serviceLabelText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -110,6 +158,38 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                     android:textColor="@color/text_secondary"
                     tools:text="Use the relay base URL only." />
+
+                <TextView
+                    android:id="@+id/serviceAuthLabelText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/text_primary"
+                    tools:text="Relay Auth Token" />
+
+                <EditText
+                    android:id="@+id/relayAuthInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_panel"
+                    android:hint="@string/settings_service_auth_placeholder"
+                    android:inputType="textPassword"
+                    android:minHeight="56dp"
+                    android:padding="18dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    tools:text="ui-test-token" />
+
+                <TextView
+                    android:id="@+id/serviceAuthHintText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Optional on local networks, but recommended for private or public relay access." />
 
                 <LinearLayout
                     android:layout_width="match_parent"

@@ -36,6 +36,7 @@ class SubmitWorker(
         val normalizedUrl = inputData.getString(KEY_NORMALIZED_URL).orEmpty()
         val sourceType = SourceType.valueOf(inputData.getString(KEY_SOURCE_TYPE) ?: SourceType.UNKNOWN.name)
         val relayBaseUrl = inputData.getString(KEY_RELAY_BASE_URL).orEmpty()
+        val relayAuthToken = inputData.getString(KEY_RELAY_AUTH_TOKEN).orEmpty()
         val modeId = inputData.getString(KEY_MODE_ID).orEmpty()
         val modeLabel = inputData.getString(KEY_MODE_LABEL)
 
@@ -72,6 +73,7 @@ class SubmitWorker(
 
         val relayResult = relayClient.safeSubmit(
             relayBaseUrl = relayBaseUrl,
+            authToken = relayAuthToken,
             modeId = modeId,
             sourceType = sourceType,
             rawSharedText = rawSharedText,
@@ -180,6 +182,7 @@ class SubmitWorker(
         const val KEY_NORMALIZED_URL = "normalized_url"
         const val KEY_SOURCE_TYPE = "source_type"
         const val KEY_RELAY_BASE_URL = "relay_base_url"
+        const val KEY_RELAY_AUTH_TOKEN = "relay_auth_token"
         const val KEY_MODE_ID = "mode_id"
         const val KEY_MODE_LABEL = "mode_label"
         const val KEY_OUTPUT_MESSAGE = "output_message"
@@ -188,6 +191,7 @@ class SubmitWorker(
         fun enqueue(context: Context, parsedShare: ParsedShare): UUID {
             val settingsStore = RelaySettingsStore(context)
             val relayBaseUrl = settingsStore.currentRelayBaseUrl()
+            val relayAuthToken = settingsStore.currentRelayAuthToken()
             val modeId = settingsStore.selectedModeId().ifBlank { BuildConfig.RELAY_MODE }
             val modeLabel = settingsStore.selectedModeLabel().ifBlank { modeId }
             val clientSubmissionId = UUID.randomUUID().toString()
@@ -201,6 +205,7 @@ class SubmitWorker(
                         .putString(KEY_NORMALIZED_URL, parsedShare.normalizedUrl)
                         .putString(KEY_SOURCE_TYPE, parsedShare.sourceType.name)
                         .putString(KEY_RELAY_BASE_URL, relayBaseUrl)
+                        .putString(KEY_RELAY_AUTH_TOKEN, relayAuthToken)
                         .putString(KEY_MODE_ID, modeId)
                         .putString(KEY_MODE_LABEL, modeLabel)
                         .build(),

@@ -111,7 +111,9 @@ class MainActivity : AppCompatActivity() {
         if (!settingsStore.hasSavedRelayBaseUrl()) {
             val hint = buildString {
                 append(getString(R.string.main_relay_not_set_hint))
-                if (settingsStore.currentRelayBaseUrl().startsWith("http://10.0.2.2")) {
+                if (settingsStore.currentConnectionType() == com.peter.paperharvestshare.model.ConnectionType.EMULATOR &&
+                    settingsStore.currentRelayBaseUrl().startsWith("http://10.0.2.2")
+                ) {
                     append("\n")
                     append(getString(R.string.main_relay_emulator_hint))
                 }
@@ -124,7 +126,14 @@ class MainActivity : AppCompatActivity() {
 
         val hint = settingsStore.lastServiceSummary()?.let {
             getString(R.string.main_relay_connected_hint, it)
-        } ?: getString(R.string.main_relay_saved_hint)
+        } ?: when {
+            settingsStore.currentConnectionType() == com.peter.paperharvestshare.model.ConnectionType.PRIVATE_NETWORK &&
+                settingsStore.currentRelayAuthToken().isBlank() ->
+                getString(R.string.main_relay_private_auth_hint)
+            settingsStore.currentConnectionType() == com.peter.paperharvestshare.model.ConnectionType.PRIVATE_NETWORK ->
+                getString(R.string.main_relay_private_hint)
+            else -> getString(R.string.main_relay_saved_hint)
+        }
         return ConfigDisplay(
             title = settingsStore.currentRelayBaseUrl(),
             hint = hint,
@@ -372,8 +381,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 val relayTaskId = record.relayTaskId ?: return@forEach
                 val relayBaseUrl = record.relayBaseUrlSnapshot ?: return@forEach
+                val relayAuthToken = settingsStore.currentRelayAuthToken()
                 recentSyncTimestamps[record.workId] = now
-                val result = relayClient.safeFetchTaskStatus(relayBaseUrl, relayTaskId)
+                val result = relayClient.safeFetchTaskStatus(relayBaseUrl, relayTaskId, relayAuthToken)
                 val remoteStatus = result.status ?: return@forEach
                 val merged = mergeRelayStatus(record, remoteStatus)
                 if (merged != null) {

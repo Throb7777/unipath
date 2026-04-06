@@ -7,11 +7,13 @@ import android.widget.RadioButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import com.peter.paperharvestshare.R
 import com.peter.paperharvestshare.data.RelayClient
 import com.peter.paperharvestshare.data.RelaySettingsStore
 import com.peter.paperharvestshare.databinding.ActivitySettingsBinding
+import com.peter.paperharvestshare.model.ConnectionType
 import com.peter.paperharvestshare.model.RelayClientConfig
 import com.peter.paperharvestshare.model.RelayModeOption
 import com.peter.paperharvestshare.util.AppLanguage
@@ -46,6 +48,9 @@ class SettingsActivity : AppCompatActivity() {
         binding.testConnectionButton.setOnClickListener { fetchModes() }
         binding.saveSettingsButton.setOnClickListener { saveSettings() }
         binding.resetDefaultsButton.setOnClickListener { restoreDefaults() }
+        binding.connectionTypeRadioGroup.setOnCheckedChangeListener { _, _ -> updateConnectionUi() }
+        binding.relayBaseUrlInput.doAfterTextChanged { updateConnectionUi() }
+        binding.relayAuthInput.doAfterTextChanged { updateConnectionUi() }
     }
 
     private fun setupStaticTexts() {
@@ -53,8 +58,14 @@ class SettingsActivity : AppCompatActivity() {
         binding.topBarBackButton.contentDescription = getString(R.string.action_back)
         binding.serviceSectionTitleText.text = getString(R.string.settings_service_section_title)
         binding.serviceSectionHintText.text = getString(R.string.settings_service_section_hint)
+        binding.connectionTypeLabelText.text = getString(R.string.settings_connection_type_label)
+        binding.connectionTypeHintText.text = getString(R.string.settings_connection_type_hint)
+        binding.connectionEmulatorRadio.text = getString(R.string.settings_connection_type_emulator)
+        binding.connectionLocalRadio.text = getString(R.string.settings_connection_type_local)
+        binding.connectionPrivateRadio.text = getString(R.string.settings_connection_type_private)
         binding.serviceLabelText.text = getString(R.string.settings_service_label)
-        binding.serviceHintText.text = getString(R.string.settings_service_hint)
+        binding.serviceAuthLabelText.text = getString(R.string.settings_service_auth_label)
+        binding.serviceAuthHintText.text = getString(R.string.settings_service_auth_hint_optional)
         binding.appSectionTitleText.text = getString(R.string.settings_app_section_title)
         binding.appSectionHintText.text = getString(R.string.settings_app_section_hint)
         binding.languageLabelText.text = getString(R.string.settings_language_label)
@@ -73,10 +84,13 @@ class SettingsActivity : AppCompatActivity() {
     private fun loadStoredState() {
         val relayBaseUrl = settingsStore.currentRelayBaseUrl()
         binding.relayBaseUrlInput.setText(relayBaseUrl)
+        binding.relayAuthInput.setText(settingsStore.currentRelayAuthToken())
+        renderConnectionSelection(settingsStore.currentConnectionType())
         selectedLanguage = AppLanguageManager.currentSelectionForUi(this)
         renderLanguageSelection()
         loadedConfig = settingsStore.cachedClientConfigFor(relayBaseUrl)
         loadedBaseUrl = relayBaseUrl.takeIf { loadedConfig != null }
+        updateConnectionUi()
         renderStatus(
             loadedConfig?.let { "${settingsStore.lastServiceSummary().orEmpty()}\n${getString(R.string.settings_service_ready)}" }
                 ?: (settingsStore.lastServiceSummary() ?: getString(R.string.settings_fetch_required)),
@@ -93,10 +107,11 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun fetchModes() {
         val relayBaseUrl = validateRelayBaseUrl() ?: return
+        val relayAuthToken = binding.relayAuthInput.text?.toString().orEmpty().trim()
         lifecycleScope.launch {
             setLoading(true)
             renderStatus(getString(R.string.settings_loading))
-            val result = relayClient.safeFetchClientConfig(relayBaseUrl)
+            val result = relayClient.safeFetchClientConfig(relayBaseUrl, relayAuthToken)
             val config = result.config
             if (result.success && config != null) {
                 loadedConfig = config
@@ -122,6 +137,8 @@ class SettingsActivity : AppCompatActivity() {
     private fun saveSettings() {
         applySelectedLanguageIfNeeded()
         val relayBaseUrl = validateRelayBaseUrl() ?: return
+        val relayAuthToken = binding.relayAuthInput.text?.toString().orEmpty().trim()
+        val connectionType = selectedConnectionType()
         val config = if (loadedBaseUrl == relayBaseUrl) {
             loadedConfig
         } else {
@@ -140,7 +157,7 @@ class SettingsActivity : AppCompatActivity() {
             return
         }
 
-        settingsStore.saveSelection(relayBaseUrl, config, selectedMode)
+        settingsStore.saveSelection(relayBaseUrl, relayAuthToken, connectionType, config, selectedMode)
         Toast.makeText(this, getString(R.string.settings_save_done), Toast.LENGTH_SHORT).show()
         finish()
     }
@@ -161,6 +178,69 @@ class SettingsActivity : AppCompatActivity() {
         }
         binding.statusValueText.text = message
         lastStatusText = message
+    }
+
+    private fun renderConnectionSelection(connectionType: ConnectionType) {
+        when (connectionType) {
+            ConnectionType.EMULATOR -> binding.connectionEmulatorRadio.isChecked = true
+            ConnectionType.LOCAL_NETWORK -> binding.connectionLocalRadio.isChecked = true
+            ConnectionType.PRIVATE_NETWORK -> binding.connectionPrivateRadio.isChecked = true
+        }
+    }
+
+    private fun selectedConnectionType(): ConnectionType =
+        when (binding.connectionTypeRadioGroup.checkedRadioButtonId) {
+            R.id.connectionEmulatorRadio -> ConnectionType.EMULATOR
+            R.id.connectionPrivateRadio -> ConnectionType.PRIVATE_NETWORK
+            else -> ConnectionType.LOCAL_NETWORK
+        }
+
+    private fun updateConnectionUi() {
+        val connectionType = selectedConnectionType()
+        val placeholder = when (connectionType) {
+            ConnectionType.EMULATOR -> getString(R.string.settings_service_placeholder_emulator)
+            ConnectionType.LOCAL_NETWORK -> getString(R.string.settings_service_placeholder_local)
+            ConnectionType.PRIVATE_NETWORK -> getString(R.string.settings_service_placeholder_private)
+        }
+        binding.relayBaseUrlInput.hint = placeholder
+        binding.serviceHintText.text = buildRelayAddressHint(connectionType)
+        binding.serviceAuthHintText.text = buildRelayAuthHint(connectionType)
+    }
+
+    private fun buildRelayAddressHint(connectionType: ConnectionType): String {
+        val normalized = RelaySettingsStore.normalizeBaseUrl(binding.relayBaseUrlInput.text?.toString().orEmpty())
+        val host = runCatching { Uri.parse(normalized).host.orEmpty() }.getOrDefault("")
+        val baseHint = when (connectionType) {
+            ConnectionType.EMULATOR -> getString(R.string.settings_service_hint_emulator)
+            ConnectionType.LOCAL_NETWORK -> getString(R.string.settings_service_hint_local)
+            ConnectionType.PRIVATE_NETWORK -> getString(R.string.settings_service_hint_private)
+        }
+        val extraHint = when {
+            RelaySettingsStore.looksLikeWildcardHost(host) -> getString(R.string.settings_service_hint_bind_note)
+            RelaySettingsStore.looksLikeLoopbackHost(host) -> getString(R.string.settings_service_hint_loopback_note)
+            connectionType == ConnectionType.PRIVATE_NETWORK && RelaySettingsStore.looksLikeLanHost(host) ->
+                getString(R.string.settings_service_hint_private_with_lan)
+            connectionType == ConnectionType.LOCAL_NETWORK && RelaySettingsStore.looksLikePrivateNetworkHost(host) ->
+                getString(R.string.settings_service_hint_local_with_private)
+            else -> ""
+        }
+        return if (extraHint.isBlank()) {
+            baseHint
+        } else {
+            "$baseHint\n$extraHint"
+        }
+    }
+
+    private fun buildRelayAuthHint(connectionType: ConnectionType): String {
+        val hasToken = binding.relayAuthInput.text?.toString().orEmpty().trim().isNotBlank()
+        return when {
+            connectionType == ConnectionType.PRIVATE_NETWORK && hasToken ->
+                getString(R.string.settings_service_auth_hint_private_ready)
+            connectionType == ConnectionType.PRIVATE_NETWORK ->
+                getString(R.string.settings_service_auth_hint_private)
+            hasToken -> getString(R.string.settings_service_auth_hint_saved)
+            else -> getString(R.string.settings_service_auth_hint_optional)
+        }
     }
 
     private fun renderModes(config: RelayClientConfig?, selectedModeId: String?) {
@@ -223,11 +303,24 @@ class SettingsActivity : AppCompatActivity() {
     private fun validateRelayBaseUrl(): String? {
         val normalized = RelaySettingsStore.normalizeBaseUrl(binding.relayBaseUrlInput.text?.toString().orEmpty())
         val uri = runCatching { Uri.parse(normalized) }.getOrNull()
+        val host = uri?.host.orEmpty()
         val isValid = uri != null &&
             (uri.scheme == "http" || uri.scheme == "https") &&
-            !uri.host.isNullOrBlank()
+            host.isNotBlank()
         return if (isValid) {
-            normalized
+            val validationError = when {
+                RelaySettingsStore.looksLikeWildcardHost(host) -> getString(R.string.settings_invalid_bind_address)
+                RelaySettingsStore.looksLikeLoopbackHost(host) -> getString(R.string.settings_invalid_loopback_address)
+                else -> null
+            }
+            if (validationError != null) {
+                binding.relayBaseUrlInput.error = validationError
+                Toast.makeText(this, validationError, Toast.LENGTH_SHORT).show()
+                null
+            } else {
+                binding.relayBaseUrlInput.error = null
+                normalized
+            }
         } else {
             binding.relayBaseUrlInput.error = getString(R.string.settings_invalid_url)
             Toast.makeText(this, getString(R.string.settings_invalid_url), Toast.LENGTH_SHORT).show()
@@ -251,6 +344,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.saveSettingsButton.isEnabled = !loading
         binding.resetDefaultsButton.isEnabled = !loading
         binding.relayBaseUrlInput.isEnabled = !loading
+        binding.relayAuthInput.isEnabled = !loading
+        binding.connectionEmulatorRadio.isEnabled = !loading
+        binding.connectionLocalRadio.isEnabled = !loading
+        binding.connectionPrivateRadio.isEnabled = !loading
     }
 
     private fun formatServiceSummary(config: RelayClientConfig): String =

@@ -16,7 +16,7 @@ from app.executors.openclaw_browser import (
     extract_text_from_browser_snapshot,
 )
 from app.executors.openclaw_prompt import build_openclaw_command, build_openclaw_message
-from app.modes import MODE_BY_ID
+from app.modes import MODE_BY_ID, custom_mode_ids_for_executor, mode_map
 from app.models import TaskRecord, utc_now_iso
 from app.openclaw_support import OpenClawCommandResolution, resolve_openclaw_command
 from app.user_facing import result_summary_for_output
@@ -51,7 +51,7 @@ class OpenClawExecutor(ManagedTaskExecutor):
         )
 
     def supported_mode_ids(self) -> tuple[str, ...]:
-        return tuple(MODE_BY_ID.keys())
+        return tuple(MODE_BY_ID.keys()) + custom_mode_ids_for_executor(self.settings.custom_modes, self.executor_id)
 
     def lane_key_for_task(self, task: TaskRecord) -> str:
         return f"openclaw:{self.settings.openclaw_target_mode}:{self._target_value()}"
@@ -430,7 +430,7 @@ class OpenClawExecutor(ManagedTaskExecutor):
             return process
 
     def _prefetch_was_required(self, task: TaskRecord) -> bool:
-        mode = MODE_BY_ID.get(task.mode)
+        mode = mode_map(self.settings.custom_modes).get(task.mode)
         if mode is None:
             return False
         return (
@@ -472,6 +472,15 @@ class OpenClawExecutor(ManagedTaskExecutor):
             return ("executor_session_locked", "OpenClaw session is busy. Try again after the current run finishes.")
         if self._is_network_error(combined):
             return ("executor_network_error", "OpenClaw hit a provider or network error while processing this task.")
+        if (
+            "device-auth.json" in combined
+            or "sessions.json.lock" in combined
+            or ("eperm: operation not permitted" in combined and ".openclaw" in combined)
+        ):
+            return (
+                "executor_auth_error",
+                "OpenClaw could not access its local auth or session files on this machine.",
+            )
         if "no api key found" in combined or "auth" in combined:
             return ("executor_auth_error", "OpenClaw authentication is not configured correctly on this machine.")
         if "timed out" in combined or "timeout" in combined:

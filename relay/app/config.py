@@ -54,11 +54,23 @@ class ShellCommandRuntimeConfig:
 
 
 @dataclass(frozen=True)
+class CustomModeRuntimeConfig:
+    id: str
+    label: str
+    description: str
+    executor_kind: str
+    shell_command_template: str
+    timeout_seconds: int
+    enabled: bool = True
+
+
+@dataclass(frozen=True)
 class RuntimeConfig:
     default_mode: str
     executor_kind: str
     shell_command: ShellCommandRuntimeConfig
     openclaw: OpenClawRuntimeConfig
+    custom_modes: tuple[CustomModeRuntimeConfig, ...] = ()
 
     def to_json_dict(self) -> dict:
         return asdict(self)
@@ -80,6 +92,7 @@ class BootstrapSettings:
     web_ui_enabled: bool
     web_ui_local_only: bool
     initial_runtime_config: RuntimeConfig
+    public_relay_url: str = ""
 
 
 @dataclass(frozen=True)
@@ -87,6 +100,7 @@ class Settings:
     host: str
     port: int
     auth_token: str
+    public_relay_url: str
     service_name: str
     service_version: str
     default_mode: str
@@ -129,6 +143,7 @@ class Settings:
     web_ui_enabled: bool
     web_ui_local_only: bool
     runtime_config_path: Path
+    custom_modes: tuple[CustomModeRuntimeConfig, ...] = ()
 
 
 def load_bootstrap_settings() -> BootstrapSettings:
@@ -173,14 +188,16 @@ def load_bootstrap_settings() -> BootstrapSettings:
             network_retry_attempts=int(os.getenv("OPENCLAW_NETWORK_RETRY_ATTEMPTS", "3")),
             network_retry_base_seconds=int(os.getenv("OPENCLAW_NETWORK_RETRY_BASE_SECONDS", "4")),
         ),
+        custom_modes=(),
     )
 
     bootstrap = BootstrapSettings(
         host=os.getenv("HOST", "0.0.0.0"),
         port=int(os.getenv("PORT", "8080")),
         auth_token=os.getenv("AUTH_TOKEN", "").strip(),
+        public_relay_url=os.getenv("PUBLIC_RELAY_URL", "").strip(),
         service_name=os.getenv("SERVICE_NAME", "UniPATH Forwarding Service").strip() or "UniPATH Forwarding Service",
-        service_version=os.getenv("SERVICE_VERSION", "0.1.0").strip() or "0.1.0",
+        service_version=os.getenv("SERVICE_VERSION", "1.0.0").strip() or "1.0.0",
         workspace_dir=workspace_dir,
         data_dir=data_dir,
         tasks_dir=tasks_dir,
@@ -201,6 +218,7 @@ def resolve_settings(bootstrap: BootstrapSettings, runtime_config: RuntimeConfig
         host=bootstrap.host,
         port=bootstrap.port,
         auth_token=bootstrap.auth_token,
+        public_relay_url=bootstrap.public_relay_url,
         service_name=bootstrap.service_name,
         service_version=bootstrap.service_version,
         default_mode=runtime_config.default_mode,
@@ -225,6 +243,7 @@ def resolve_settings(bootstrap: BootstrapSettings, runtime_config: RuntimeConfig
         openclaw_session_lock_defer_seconds=runtime_config.openclaw.session_lock_defer_seconds,
         openclaw_network_retry_attempts=runtime_config.openclaw.network_retry_attempts,
         openclaw_network_retry_base_seconds=runtime_config.openclaw.network_retry_base_seconds,
+        custom_modes=runtime_config.custom_modes,
         max_concurrent_tasks=int(os.getenv("MAX_CONCURRENT_TASKS", "2")),
         startup_recovery_limit=int(os.getenv("STARTUP_RECOVERY_LIMIT", "25")),
         startup_recovery_stagger_ms=int(os.getenv("STARTUP_RECOVERY_STAGGER_MS", "150")),
@@ -265,9 +284,12 @@ def validate_bootstrap_settings(settings: BootstrapSettings) -> None:
 
 
 def validate_runtime_config(runtime_config: RuntimeConfig) -> None:
-    from app.modes import MODE_BY_ID
+    import re
 
-    if runtime_config.default_mode not in MODE_BY_ID:
+    from app.modes import mode_map
+
+    available_modes = mode_map(runtime_config.custom_modes)
+    if runtime_config.default_mode not in available_modes:
         raise ValueError(f"default_mode is not registered: {runtime_config.default_mode}")
     if runtime_config.executor_kind not in {"mock", "openclaw", "shell_command"}:
         raise ValueError("executor_kind must be one of: mock, openclaw, shell_command.")
@@ -283,8 +305,28 @@ def validate_runtime_config(runtime_config: RuntimeConfig) -> None:
         raise ValueError("openclaw.network_retry_* settings must be positive integers.")
     if runtime_config.executor_kind == "openclaw" and not runtime_config.openclaw.command.strip():
         raise ValueError("openclaw.command must not be empty when executor_kind=openclaw.")
-    if runtime_config.executor_kind == "shell_command" and not runtime_config.shell_command.template.strip():
-        raise ValueError("shell_command.template must not be empty when executor_kind=shell_command.")
+    seen_custom_ids: set[str] = set()
+    shell_custom_mode_ids: set[str] = set()
+    for custom_mode in runtime_config.custom_modes:
+        if not re.fullmatch(r"custom_[a-z0-9_]{2,64}", custom_mode.id):
+            raise ValueError("custom mode id must match custom_[a-z0-9_]+ and stay lowercase.")
+        if custom_mode.id in seen_custom_ids:
+            raise ValueError(f"custom mode id is duplicated: {custom_mode.id}")
+        seen_custom_ids.add(custom_mode.id)
+        if not custom_mode.label.strip():
+            raise ValueError(f"custom mode label must not be empty: {custom_mode.id}")
+        if custom_mode.executor_kind != "shell_command":
+            raise ValueError("custom modes currently support executor_kind=shell_command only.")
+        if custom_mode.timeout_seconds <= 0:
+            raise ValueError(f"custom mode timeout_seconds must be a positive integer: {custom_mode.id}")
+        if not custom_mode.shell_command_template.strip():
+            raise ValueError(f"custom mode shell_command_template must not be empty: {custom_mode.id}")
+        if custom_mode.enabled:
+            shell_custom_mode_ids.add(custom_mode.id)
+
+    shell_mode_uses_custom_template = runtime_config.default_mode in shell_custom_mode_ids
+    if runtime_config.executor_kind == "shell_command" and not shell_mode_uses_custom_template and not runtime_config.shell_command.template.strip():
+        raise ValueError("shell_command.template must not be empty when executor_kind=shell_command and the default mode is not a custom shell mode.")
     if runtime_config.openclaw.target_mode not in VALID_OPENCLAW_TARGET_MODES:
         raise ValueError(f"openclaw.target_mode must be one of: {', '.join(sorted(VALID_OPENCLAW_TARGET_MODES))}")
     if runtime_config.openclaw.thinking not in VALID_THINKING_LEVELS:
@@ -301,9 +343,9 @@ def validate_runtime_config(runtime_config: RuntimeConfig) -> None:
 
 
 def validate_settings(settings: Settings) -> None:
-    from app.modes import MODE_BY_ID
+    from app.modes import mode_map
 
-    if settings.default_mode not in MODE_BY_ID:
+    if settings.default_mode not in mode_map(settings.custom_modes):
         raise ValueError(f"DEFAULT_MODE is not registered: {settings.default_mode}")
     if settings.max_concurrent_tasks <= 0:
         raise ValueError("MAX_CONCURRENT_TASKS must be a positive integer.")
@@ -347,5 +389,6 @@ def validate_settings(settings: Settings) -> None:
                 network_retry_attempts=settings.openclaw_network_retry_attempts,
                 network_retry_base_seconds=settings.openclaw_network_retry_base_seconds,
             ),
+            custom_modes=settings.custom_modes,
         )
     )

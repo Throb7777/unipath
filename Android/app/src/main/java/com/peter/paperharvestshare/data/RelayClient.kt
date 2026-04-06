@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit
 class RelayClient {
     suspend fun safeSubmit(
         relayBaseUrl: String,
+        authToken: String,
         modeId: String,
         sourceType: SourceType,
         rawSharedText: String,
@@ -26,7 +27,7 @@ class RelayClient {
         clientSubmissionId: String,
     ): RelaySubmissionResult =
         try {
-            submit(relayBaseUrl, modeId, sourceType, rawSharedText, rawUrl, normalizedUrl, clientSubmissionId)
+            submit(relayBaseUrl, authToken, modeId, sourceType, rawSharedText, rawUrl, normalizedUrl, clientSubmissionId)
         } catch (error: IOException) {
             AppLog.w(TAG, "Relay request failed before response: ${error.message}", error)
             RelaySubmissionResult(
@@ -37,9 +38,9 @@ class RelayClient {
             )
         }
 
-    suspend fun safeFetchClientConfig(relayBaseUrl: String): RelayConfigFetchResult =
+    suspend fun safeFetchClientConfig(relayBaseUrl: String, authToken: String): RelayConfigFetchResult =
         try {
-            fetchClientConfig(relayBaseUrl)
+            fetchClientConfig(relayBaseUrl, authToken)
         } catch (error: IOException) {
             AppLog.w(TAG, "Relay config request failed: ${error.message}", error)
             RelayConfigFetchResult(
@@ -50,9 +51,9 @@ class RelayClient {
             )
         }
 
-    suspend fun safeFetchTaskStatus(relayBaseUrl: String, relayTaskId: String): RelayTaskStatusFetchResult =
+    suspend fun safeFetchTaskStatus(relayBaseUrl: String, relayTaskId: String, authToken: String): RelayTaskStatusFetchResult =
         try {
-            fetchTaskStatus(relayBaseUrl, relayTaskId)
+            fetchTaskStatus(relayBaseUrl, relayTaskId, authToken)
         } catch (error: IOException) {
             AppLog.w(TAG, "Relay task status request failed: ${error.message}", error)
             RelayTaskStatusFetchResult(
@@ -63,9 +64,9 @@ class RelayClient {
             )
         }
 
-    suspend fun safeCancelTask(relayBaseUrl: String, relayTaskId: String): RelayCancelResult =
+    suspend fun safeCancelTask(relayBaseUrl: String, relayTaskId: String, authToken: String): RelayCancelResult =
         try {
-            cancelTask(relayBaseUrl, relayTaskId)
+            cancelTask(relayBaseUrl, relayTaskId, authToken)
         } catch (error: IOException) {
             AppLog.w(TAG, "Relay cancel request failed: ${error.message}", error)
             RelayCancelResult(
@@ -78,6 +79,7 @@ class RelayClient {
 
     private suspend fun submit(
         relayBaseUrl: String,
+        authToken: String,
         modeId: String,
         sourceType: SourceType,
         rawSharedText: String,
@@ -101,7 +103,7 @@ class RelayClient {
             .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
             .header("Accept", "application/json")
 
-        attachAuth(requestBuilder)
+        attachAuth(requestBuilder, authToken)
 
         SHARED_CLIENT.newCall(requestBuilder.build()).execute().use { response ->
             AppLog.i(TAG, "Relay responded with HTTP ${response.code}")
@@ -143,7 +145,7 @@ class RelayClient {
         }
     }
 
-    private suspend fun fetchClientConfig(relayBaseUrl: String): RelayConfigFetchResult = withContext(Dispatchers.IO) {
+    private suspend fun fetchClientConfig(relayBaseUrl: String, authToken: String): RelayConfigFetchResult = withContext(Dispatchers.IO) {
         val endpoint = "${RelaySettingsStore.normalizeBaseUrl(relayBaseUrl)}/api/client-config"
         AppLog.i(TAG, "GET $endpoint")
         val requestBuilder = Request.Builder()
@@ -151,7 +153,7 @@ class RelayClient {
             .get()
             .header("Accept", "application/json")
 
-        attachAuth(requestBuilder)
+        attachAuth(requestBuilder, authToken)
 
         SHARED_CLIENT.newCall(requestBuilder.build()).execute().use { response ->
             val bodyText = response.body?.string().orEmpty()
@@ -183,7 +185,7 @@ class RelayClient {
             }.filter { it.id.isNotBlank() }
 
             val config = RelayClientConfig(
-                serviceName = json.optString("serviceName").ifBlank { "Relay" },
+                serviceName = json.optString("serviceName").ifBlank { "UniPATH Forwarding Service" },
                 serviceVersion = json.optString("serviceVersion"),
                 defaultModeId = json.optString("defaultMode").ifBlank {
                     json.optString("defaultModeId").ifBlank { BuildConfig.RELAY_MODE }
@@ -202,7 +204,7 @@ class RelayClient {
         }
     }
 
-    private suspend fun fetchTaskStatus(relayBaseUrl: String, relayTaskId: String): RelayTaskStatusFetchResult = withContext(Dispatchers.IO) {
+    private suspend fun fetchTaskStatus(relayBaseUrl: String, relayTaskId: String, authToken: String): RelayTaskStatusFetchResult = withContext(Dispatchers.IO) {
         val endpoint = "${RelaySettingsStore.normalizeBaseUrl(relayBaseUrl)}/api/share-submissions/$relayTaskId"
         AppLog.i(TAG, "GET $endpoint")
         val requestBuilder = Request.Builder()
@@ -210,7 +212,7 @@ class RelayClient {
             .get()
             .header("Accept", "application/json")
 
-        attachAuth(requestBuilder)
+        attachAuth(requestBuilder, authToken)
 
         SHARED_CLIENT.newCall(requestBuilder.build()).execute().use { response ->
             val bodyText = response.body?.string().orEmpty()
@@ -256,7 +258,7 @@ class RelayClient {
         }
     }
 
-    private suspend fun cancelTask(relayBaseUrl: String, relayTaskId: String): RelayCancelResult = withContext(Dispatchers.IO) {
+    private suspend fun cancelTask(relayBaseUrl: String, relayTaskId: String, authToken: String): RelayCancelResult = withContext(Dispatchers.IO) {
         val endpoint = "${RelaySettingsStore.normalizeBaseUrl(relayBaseUrl)}/api/share-submissions/$relayTaskId/cancel"
         AppLog.i(TAG, "POST $endpoint")
         val requestBuilder = Request.Builder()
@@ -264,7 +266,7 @@ class RelayClient {
             .post("{}".toRequestBody(JSON_MEDIA_TYPE))
             .header("Accept", "application/json")
 
-        attachAuth(requestBuilder)
+        attachAuth(requestBuilder, authToken)
 
         SHARED_CLIENT.newCall(requestBuilder.build()).execute().use { response ->
             val bodyText = response.body?.string().orEmpty()
@@ -292,9 +294,10 @@ class RelayClient {
         }
     }
 
-    private fun attachAuth(requestBuilder: Request.Builder) {
-        if (BuildConfig.RELAY_AUTH_TOKEN.isNotBlank()) {
-            requestBuilder.header("Authorization", "Bearer ${BuildConfig.RELAY_AUTH_TOKEN}")
+    private fun attachAuth(requestBuilder: Request.Builder, authToken: String) {
+        val resolvedToken = authToken.trim().ifBlank { BuildConfig.RELAY_AUTH_TOKEN.trim() }
+        if (resolvedToken.isNotBlank()) {
+            requestBuilder.header("Authorization", "Bearer $resolvedToken")
         }
     }
 

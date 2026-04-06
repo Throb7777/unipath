@@ -9,11 +9,25 @@
   </div>
   {% if saved %}<p class="banner ok">{{ t('settings.saved') }}</p>{% endif %}
   {% if error %}<p class="banner error">{{ error }}</p>{% endif %}
-  {% if test_result %}
+  {% if test_result and test_result.executorHealth %}
   <div class="banner {{ 'ok' if test_result.executorHealth.available else 'error' }}">
     <strong>{{ t('settings.executor_test') }}:</strong> {{ test_result.executorHealth.label }} -
     {{ t('settings.available') if test_result.executorHealth.available else t('settings.unavailable') }}.
     {{ test_result.executorHealth.message }}
+  </div>
+  {% endif %}
+  {% if mode_test_result %}
+  <div class="banner {{ 'ok' if mode_test_result.status == 'completed' else 'error' }}">
+    <strong>{{ t('settings.mode_test') }}:</strong> {{ mode_test_result.modeLabel }} -
+    {{ mode_test_result.status }}.
+    {{ mode_test_result.summary }}
+    <div style="margin-top: 0.5rem;">{{ t('settings.mode_test_note') }}</div>
+    {% if mode_test_result.commandPreview %}
+    <details class="advanced-box" style="margin-top: 0.75rem;">
+      <summary>{{ t('settings.mode_test_command') }}</summary>
+      <pre>{{ mode_test_result.commandPreview }}</pre>
+    </details>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -178,5 +192,139 @@
       </div>
     </div>
   </form>
+
+  <section class="group" style="margin-top: 1.5rem;">
+    <div class="group-heading">
+      <strong>{{ t('settings.custom_modes') }}</strong>
+      <p>{{ t('settings.custom_modes_body') }}</p>
+    </div>
+
+    <p class="inline-help">{{ t('settings.custom_modes_shell_only') }}</p>
+
+    {% if custom_modes %}
+      {% for custom_mode in custom_modes %}
+      <form method="post" action="{{ page_url('/ui/settings') }}" class="stack" style="margin-top: 1rem;">
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <input type="hidden" name="custom_mode_original_id" value="{{ custom_mode.id }}">
+        <div class="grid two">
+          <div class="field">
+            <label>{{ t('settings.custom_mode.label') }}
+              <input name="custom_mode_label" value="{{ custom_mode.label }}">
+            </label>
+          </div>
+          <div class="field">
+            <label>{{ t('settings.custom_mode.id') }}
+              <input name="custom_mode_id" value="{{ custom_mode.id }}">
+            </label>
+          </div>
+          <div class="field">
+            <label>{{ t('settings.custom_mode.description') }}
+              <input name="custom_mode_description" value="{{ custom_mode.description }}">
+            </label>
+          </div>
+          <div class="field">
+            <label>{{ t('settings.custom_mode.timeout_seconds') }}
+              <input name="custom_mode_timeout_seconds" type="number" value="{{ custom_mode.timeout_seconds }}">
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label>{{ t('settings.custom_mode.template') }}
+            <textarea name="custom_mode_shell_command_template" rows="4">{{ custom_mode.shell_command_template }}</textarea>
+          </label>
+        </div>
+        <p class="inline-help">{{ t('settings.custom_mode.variables') }}</p>
+        <details class="advanced-box">
+          <summary>{{ t('settings.custom_mode.test') }}</summary>
+          <div class="grid two" style="margin-top: 1rem;">
+            <div class="field">
+              <label>{{ t('settings.custom_mode.sample_url') }}
+                <input name="custom_mode_sample_url" value="https://example.com/article">
+              </label>
+            </div>
+            <div class="field">
+              <label>{{ t('settings.custom_mode.sample_source') }}
+                <input name="custom_mode_sample_source" value="unknown">
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label>{{ t('settings.custom_mode.sample_text') }}
+              <textarea name="custom_mode_sample_text" rows="3"></textarea>
+            </label>
+          </div>
+        </details>
+        <div class="actions">
+          <button type="submit" name="_action" value="test_custom_mode" class="secondary">{{ t('settings.custom_mode.test') }}</button>
+          <button type="submit" name="_action" value="duplicate_custom_mode" class="secondary">{{ t('settings.custom_mode.duplicate') }}</button>
+          <button type="submit" name="_action" value="save_custom_mode">{{ t('settings.custom_mode.save') }}</button>
+          <button type="submit" name="_action" value="delete_custom_mode" class="secondary">{{ t('settings.custom_mode.delete') }}</button>
+        </div>
+      </form>
+      {% endfor %}
+    {% else %}
+      <p class="inline-help">{{ t('settings.custom_modes_empty') }}</p>
+    {% endif %}
+
+    <form method="post" action="{{ page_url('/ui/settings') }}" class="stack" style="margin-top: 1.5rem;">
+      <input type="hidden" name="lang" value="{{ lang }}">
+      <div class="group-heading">
+        <strong>{{ t('settings.custom_mode.create_title') }}</strong>
+        <p>{{ t('settings.custom_mode.create_body') }}</p>
+      </div>
+      <div class="grid two">
+        <div class="field">
+          <label>{{ t('settings.custom_mode.label') }}
+            <input name="custom_mode_label" placeholder="Save article locally">
+          </label>
+        </div>
+        <div class="field">
+          <label>{{ t('settings.custom_mode.id') }}
+            <input name="custom_mode_id" placeholder="custom_save_article">
+          </label>
+        </div>
+        <div class="field">
+          <label>{{ t('settings.custom_mode.description') }}
+            <input name="custom_mode_description" placeholder="Run a local script for saved articles.">
+          </label>
+        </div>
+        <div class="field">
+          <label>{{ t('settings.custom_mode.timeout_seconds') }}
+            <input name="custom_mode_timeout_seconds" type="number" value="180">
+          </label>
+        </div>
+      </div>
+      <div class="field">
+        <label>{{ t('settings.custom_mode.template') }}
+          <textarea name="custom_mode_shell_command_template" rows="4" placeholder='python scripts\save_article.py "{normalized_url}"'></textarea>
+        </label>
+      </div>
+      <p class="inline-help">{{ t('settings.custom_mode.variables') }}</p>
+      <details class="advanced-box">
+        <summary>{{ t('settings.custom_mode.test') }}</summary>
+        <div class="grid two" style="margin-top: 1rem;">
+          <div class="field">
+            <label>{{ t('settings.custom_mode.sample_url') }}
+              <input name="custom_mode_sample_url" value="https://example.com/article">
+            </label>
+          </div>
+          <div class="field">
+            <label>{{ t('settings.custom_mode.sample_source') }}
+              <input name="custom_mode_sample_source" value="unknown">
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label>{{ t('settings.custom_mode.sample_text') }}
+            <textarea name="custom_mode_sample_text" rows="3"></textarea>
+          </label>
+        </div>
+      </details>
+      <div class="actions">
+        <button type="submit" name="_action" value="test_custom_mode" class="secondary">{{ t('settings.custom_mode.test') }}</button>
+        <button type="submit" name="_action" value="save_custom_mode">{{ t('settings.custom_mode.save') }}</button>
+      </div>
+    </form>
+  </section>
 </section>
 {% endblock %}

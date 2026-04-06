@@ -7,8 +7,9 @@ import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
-from app.config import BootstrapSettings, Settings, RuntimeConfig, resolve_settings
+from app.config import BootstrapSettings, CustomModeRuntimeConfig, Settings, RuntimeConfig, resolve_settings
 from app.diagnostics import build_environment_diagnostic_summary, build_runtime_diagnostic_report
 from app.executors import ExecutorRegistry
 from app.executors.base import ExecutorHealth
@@ -128,6 +129,7 @@ class AppRuntime:
                 "defaultMode": "runtime config",
                 "executorKind": "runtime config",
                 "executorConfigs": "runtime config",
+                "customModes": "runtime config",
             },
             "applyScope": {
                 "appliesToNewTasks": True,
@@ -193,6 +195,72 @@ class AppRuntime:
                 "details": health.details,
             },
         }
+
+    async def test_custom_mode_preview(
+        self,
+        custom_mode: CustomModeRuntimeConfig,
+        *,
+        normalized_url: str,
+        raw_text: str = "",
+        source: str = "unknown",
+    ) -> dict[str, Any]:
+        preview_custom_modes = tuple(mode for mode in self.runtime_config.custom_modes if mode.id != custom_mode.id) + (custom_mode,)
+        preview_runtime_config = replace(
+            self.runtime_config,
+            default_mode=custom_mode.id,
+            executor_kind=custom_mode.executor_kind,
+            custom_modes=preview_custom_modes,
+        )
+
+        with tempfile.TemporaryDirectory(prefix="relay-custom-mode-test-") as tempdir:
+            temp_root = Path(tempdir)
+            workspace_dir = temp_root / "runtime"
+            data_dir = workspace_dir / "data"
+            tasks_dir = workspace_dir / "tasks"
+            logs_dir = workspace_dir / "logs"
+            for directory in (workspace_dir, data_dir, tasks_dir, logs_dir):
+                directory.mkdir(parents=True, exist_ok=True)
+
+            preview_bootstrap = replace(
+                self.bootstrap,
+                workspace_dir=workspace_dir,
+                data_dir=data_dir,
+                tasks_dir=tasks_dir,
+                logs_dir=logs_dir,
+                database_path=data_dir / "relay.sqlite3",
+                runtime_config_path=data_dir / "config.json",
+                initial_runtime_config=preview_runtime_config,
+            )
+            preview_runtime = AppRuntime(preview_bootstrap)
+            await preview_runtime.initialize()
+            try:
+                payload = ShareSubmissionRequest(
+                    mode=custom_mode.id,
+                    source=source,
+                    rawText=raw_text or normalized_url,
+                    rawUrl=normalized_url,
+                    normalizedUrl=normalized_url,
+                    clientSubmissionId=f"custom-mode-test-{uuid4().hex[:8]}",
+                    clientAppVersion="web-ui-test",
+                )
+                response, _ = preview_runtime.submit(payload)
+                await preview_runtime.service.run_task(response.taskId)
+                task = preview_runtime.get_task_status(response.taskId)
+                task_dir = preview_runtime.bootstrap.tasks_dir / response.taskId
+                command_preview = ""
+                command_path = task_dir / "command.txt"
+                if command_path.exists():
+                    command_preview = command_path.read_text(encoding="utf-8")[:800]
+                return {
+                    "modeId": custom_mode.id,
+                    "modeLabel": custom_mode.label,
+                    "status": task.status,
+                    "summary": task.problemTitle or task.resultSummary or task.stageLabel,
+                    "task": task.model_dump(),
+                    "commandPreview": command_preview,
+                }
+            finally:
+                await preview_runtime.shutdown()
 
     async def smoke_test(self, smoke_kind: str) -> dict[str, Any]:
         with tempfile.TemporaryDirectory(prefix="relay-smoke-") as tempdir:

@@ -67,9 +67,8 @@ object UrlNormalizer {
             else -> ParsedShare(
                 rawSharedText = text,
                 extractedUrl = extracted,
-                normalizedUrl = null,
+                normalizedUrl = stripFragment(uri),
                 sourceType = SourceType.UNKNOWN,
-                errorMessage = context.getString(R.string.share_error_unsupported),
             )
         }
     }

@@ -32,6 +32,12 @@
   </div>
 </section>
 
+{% if remote_access_banner %}
+<section class="panel">
+  <p class="banner {{ remote_access_banner.tone }}">{{ remote_access_banner.title }} {{ remote_access_banner.body }}</p>
+</section>
+{% endif %}
+
 <section class="panel">
   <div class="section-heading">
     <div>
@@ -74,11 +80,69 @@
       <p>{{ t('connection.body') }}</p>
     </div>
   </div>
-  <ul class="meta-list">
-    <li><strong>{{ t('connection.local') }}:</strong> {{ connection_hints.local }}</li>
-    <li><strong>{{ t('connection.emulator') }}:</strong> {{ connection_hints.android_emulator }}</li>
-    <li><strong>{{ t('connection.bind') }}:</strong> {{ connection_hints.bind }}</li>
-  </ul>
+  <div class="grid two">
+    <div class="quick-card">
+      <span>{{ t('connection.local') }}</span>
+      <strong>{{ connection_hints.local }}</strong>
+      <p>{{ t('connection.local_body') }}</p>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.local }}">{{ t('connection.copy_local') }}</button>
+    </div>
+    <div class="quick-card">
+      <span>{{ t('connection.emulator') }}</span>
+      <strong>{{ connection_hints.android_emulator }}</strong>
+      <p>{{ t('connection.emulator_body') }}</p>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.android_emulator }}">{{ t('connection.copy_emulator') }}</button>
+    </div>
+    <div class="quick-card">
+      <span>{{ t('connection.bind') }}</span>
+      <strong>{{ connection_hints.bind }}</strong>
+      <p>{{ t('connection.bind_body') }}</p>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.bind }}">{{ t('connection.copy_bind') }}</button>
+    </div>
+    <div class="quick-card">
+      <span>{{ t('connection.lan') }}</span>
+      {% if connection_hints.lan %}
+      <strong>{{ connection_hints.lan[0] }}</strong>
+      <p>{{ t('connection.lan_body') }}</p>
+      <ul class="meta-list">
+        {% for url in connection_hints.lan %}
+        <li>{{ url }}</li>
+        {% endfor %}
+      </ul>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.lan[0] }}">{{ t('connection.copy_lan') }}</button>
+      {% else %}
+      <strong>{{ t('connection.none') }}</strong>
+      <p>{{ t('connection.lan_empty') }}</p>
+      {% endif %}
+    </div>
+    <div class="quick-card">
+      <span>{{ t('connection.private') }}</span>
+      {% if connection_hints.private %}
+      <strong>{{ connection_hints.private[0] }}</strong>
+      <p>{{ t('connection.private_body') }}</p>
+      <ul class="meta-list">
+        {% for url in connection_hints.private %}
+        <li>{{ url }}</li>
+        {% endfor %}
+      </ul>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.private[0] }}">{{ t('connection.copy_private') }}</button>
+      {% else %}
+      <strong>{{ t('connection.none') }}</strong>
+      <p>{{ t('connection.private_empty') }}</p>
+      {% endif %}
+    </div>
+    <div class="quick-card">
+      <span>{{ t('connection.public') }}</span>
+      {% if connection_hints.public %}
+      <strong>{{ connection_hints.public }}</strong>
+      <p>{{ t('connection.public_body') }}</p>
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.public }}">{{ t('connection.copy_public') }}</button>
+      {% else %}
+      <strong>{{ t('connection.none') }}</strong>
+      <p>{{ t('connection.public_empty') }}</p>
+      {% endif %}
+    </div>
+  </div>
 </section>
 
 <section class="panel">

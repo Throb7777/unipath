@@ -85,6 +85,51 @@ def build_runtime_diagnostic_report(
         )
     )
 
+    host = str(health.get("host", "") or "")
+    port = health.get("port", "-")
+    auth_configured = bool(health.get("authConfigured"))
+    if host in {"127.0.0.1", "localhost", "::1"}:
+        items.append(
+            DiagnosticItem(
+                key="remote_access",
+                category="config",
+                severity="warning",
+                title="Remote or private-network access is not ready",
+                message=f"Relay is listening on {host}:{port}. Another device cannot reach this bind address yet.",
+                suggested_actions=(
+                    "Set HOST=0.0.0.0 or another reachable interface before using a phone or private-network client.",
+                    "Keep AUTH_TOKEN enabled before exposing relay beyond the local machine.",
+                ),
+                details={"host": host, "port": port, "authConfigured": auth_configured},
+            )
+        )
+    elif not auth_configured:
+        items.append(
+            DiagnosticItem(
+                key="remote_access",
+                category="config",
+                severity="warning",
+                title="Remote or private-network access still needs protection",
+                message=f"Relay is reachable on {host}:{port}, but AUTH_TOKEN is still empty.",
+                suggested_actions=(
+                    "Set AUTH_TOKEN before using relay from another device, a Tailscale network, or a public URL.",
+                    "Retest the Android connection after saving the token and updating the app settings.",
+                ),
+                details={"host": host, "port": port, "authConfigured": auth_configured},
+            )
+        )
+    else:
+        items.append(
+            DiagnosticItem(
+                key="remote_access",
+                category="config",
+                severity="ok",
+                title="Remote or private-network access looks ready",
+                message=f"Relay is reachable on {host}:{port} and auth token protection is enabled.",
+                details={"host": host, "port": port, "authConfigured": auth_configured},
+            )
+        )
+
     configured_executor = str(health.get("configuredExecutor", "") or "")
     executor_available = bool(health.get("executorAvailable"))
     executor_message = str(health.get("executorMessage", "") or "")
@@ -177,6 +222,8 @@ def build_environment_diagnostic_summary(
         f"Summary: {report.summary}",
         f"Processing Method: {health.get('configuredExecutor') or '-'}",
         f"Default Mode: {health.get('defaultMode') or '-'}",
+        f"Relay Bind: {health.get('host') or '-'}:{health.get('port') or '-'}",
+        f"Remote Access: {'ready' if health.get('authConfigured') and str(health.get('host') or '') not in {'127.0.0.1', 'localhost', '::1'} else 'needs setup'}",
         f"Runtime Config: {runtime_config_path}",
     ]
     if report.blockers:

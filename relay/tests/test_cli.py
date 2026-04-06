@@ -24,11 +24,11 @@ def make_bootstrap(root: Path) -> BootstrapSettings:
         directory.mkdir(parents=True, exist_ok=True)
 
     return BootstrapSettings(
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=18080,
-        auth_token="",
+        auth_token="cli-test-token",
         service_name="Relay CLI Test",
-        service_version="0.1.0",
+        service_version="1.0.0",
         workspace_dir=workspace_dir,
         data_dir=data_dir,
         tasks_dir=tasks_dir,

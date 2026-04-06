@@ -71,10 +71,10 @@ ERROR_ADVICE: dict[str, ErrorAdvice] = {
     ),
     "executor_auth_error": ErrorAdvice(
         title="Authentication is not ready",
-        message="The selected processing method is missing valid authentication.",
+        message="The selected processing method cannot use its local authentication or model credentials yet.",
         suggested_actions=(
-            "Check the local tool login or API key configuration.",
-            "Run the diagnostics view or relay doctor before retrying.",
+            "Run openclaw doctor or the relay diagnostics view and fix the reported auth or session-state issue.",
+            "Make sure the local OpenClaw state directory is writable and that the required model credentials are configured.",
         ),
     ),
     "executor_timeout": ErrorAdvice(

@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from app.config import Settings
 from app.executors import ExecutorRegistry
 from app.models import CancelTaskResponse, ClientConfigResponse, ShareSubmissionRequest, ShareSubmissionResponse, TaskStatusResponse
-from app.modes import MODE_BY_ID, MODE_REGISTRY, list_client_modes
+from app.modes import list_client_modes, mode_map, mode_registry
 from app.store import TaskStore
 
 logger = logging.getLogger("relay.service")
@@ -44,11 +44,16 @@ class RelayService:
         selected_executor = self.executors.get_default()
         selected_health = selected_executor.health()
         runtime_writable = all(path.exists() for path in (self.settings.workspace_dir, self.settings.data_dir, self.settings.tasks_dir, self.settings.logs_dir))
-        supported_default_modes = [mode.id for mode in MODE_REGISTRY if selected_executor.supports_mode(mode.id)]
+        runtime_modes = mode_registry(self.settings.custom_modes)
+        supported_default_modes = [mode.id for mode in runtime_modes if selected_executor.supports_mode(mode.id)]
         snapshot = {
             "service": self.settings.service_name,
             "version": self.settings.service_version,
             "status": "ok",
+            "host": self.settings.host,
+            "port": self.settings.port,
+            "authConfigured": bool(self.settings.auth_token),
+            "publicRelayUrl": self.settings.public_relay_url,
             "configuredExecutor": self.settings.executor_kind,
             "defaultMode": self.settings.default_mode,
             "supportedDefaultModes": supported_default_modes,
@@ -79,14 +84,16 @@ class RelayService:
 
     def client_config(self) -> ClientConfigResponse:
         selected_executor = self.executors.get_default()
-        default_mode = self.settings.default_mode if self.settings.default_mode in MODE_BY_ID else next(iter(MODE_BY_ID))
+        runtime_mode_map = mode_map(self.settings.custom_modes)
+        runtime_modes = mode_registry(self.settings.custom_modes)
+        default_mode = self.settings.default_mode if self.settings.default_mode in runtime_mode_map else next(iter(runtime_mode_map))
         if not selected_executor.supports_mode(default_mode):
-            default_mode = next((mode.id for mode in MODE_REGISTRY if selected_executor.supports_mode(mode.id)), next(iter(MODE_BY_ID)))
+            default_mode = next((mode.id for mode in runtime_modes if selected_executor.supports_mode(mode.id)), next(iter(runtime_mode_map)))
         return ClientConfigResponse(
             serviceName=self.settings.service_name,
             serviceVersion=self.settings.service_version,
             defaultMode=default_mode,
-            modes=list_client_modes(),
+            modes=list_client_modes(self.settings.custom_modes),
         )
 
     def submit(self, payload: ShareSubmissionRequest) -> tuple[ShareSubmissionResponse, bool]:
@@ -236,7 +243,8 @@ class RelayService:
         return deleted
 
     def _validate_submission(self, payload: ShareSubmissionRequest) -> None:
-        if payload.mode not in MODE_BY_ID:
+        runtime_mode_map = mode_map(self.settings.custom_modes)
+        if payload.mode not in runtime_mode_map:
             raise HTTPException(status_code=400, detail=f"Unsupported mode: {payload.mode}")
         if payload.source not in SUPPORTED_SOURCES:
             raise HTTPException(status_code=400, detail=f"Unsupported source: {payload.source}")

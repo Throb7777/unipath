@@ -29,7 +29,7 @@ def make_bootstrap(root: Path) -> BootstrapSettings:
         port=18080,
         auth_token="",
         service_name="Relay Test",
-        service_version="0.1.0",
+        service_version="1.0.0",
         workspace_dir=workspace_dir,
         data_dir=data_dir,
         tasks_dir=tasks_dir,
@@ -92,6 +92,37 @@ class RuntimeConfigTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(saved_payload["runtime"]["executor_kind"], "shell_command")
             self.assertEqual(saved_payload["runtime"]["shell_command"]["timeout_seconds"], 45)
 
+    async def test_runtime_config_store_persists_custom_modes(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            bootstrap = make_bootstrap(Path(tempdir))
+            store = RuntimeConfigStore(bootstrap)
+
+            updated = store.merge_and_save(
+                {
+                    "default_mode": "custom_save_article",
+                    "executor_kind": "shell_command",
+                    "custom_modes": [
+                        {
+                            "id": "custom_save_article",
+                            "label": "Save Article",
+                            "description": "Run a local article saver.",
+                            "executor_kind": "shell_command",
+                            "shell_command_template": "python scripts/save.py \"{normalized_url}\"",
+                            "timeout_seconds": 90,
+                            "enabled": True,
+                        }
+                    ],
+                }
+            )
+
+            self.assertEqual(updated.default_mode, "custom_save_article")
+            self.assertEqual(len(updated.custom_modes), 1)
+            self.assertEqual(updated.custom_modes[0].label, "Save Article")
+            self.assertEqual(updated.custom_modes[0].timeout_seconds, 90)
+
+            saved_payload = json.loads(bootstrap.runtime_config_path.read_text(encoding="utf-8"))
+            self.assertEqual(saved_payload["runtime"]["custom_modes"][0]["id"], "custom_save_article")
+
     async def test_runtime_config_store_migrates_legacy_flat_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             bootstrap = make_bootstrap(Path(tempdir))
@@ -133,3 +164,31 @@ class RuntimeConfigTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(runtime.settings.shell_command_template, "echo {normalized_url}")
             resolved = resolve_settings(bootstrap, runtime.runtime_config)
             self.assertEqual(resolved.executor_kind, "shell_command")
+
+    async def test_runtime_config_accepts_custom_shell_mode_as_default_without_global_template(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            bootstrap = make_bootstrap(Path(tempdir))
+            runtime = AppRuntime(bootstrap)
+            await runtime.initialize()
+
+            await runtime.update_runtime_config(
+                {
+                    "default_mode": "custom_archive_article",
+                    "executor_kind": "shell_command",
+                    "shell_command": {"template": "", "timeout_seconds": 60},
+                    "custom_modes": [
+                        {
+                            "id": "custom_archive_article",
+                            "label": "Archive Article",
+                            "description": "Archive a shared article locally.",
+                            "executor_kind": "shell_command",
+                            "shell_command_template": "echo {normalized_url}",
+                            "timeout_seconds": 60,
+                            "enabled": True,
+                        }
+                    ],
+                }
+            )
+
+            self.assertEqual(runtime.settings.default_mode, "custom_archive_article")
+            self.assertEqual(runtime.settings.custom_modes[0].id, "custom_archive_article")

@@ -18,6 +18,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.peter.paperharvestshare.R
 import com.peter.paperharvestshare.data.RelayClient
+import com.peter.paperharvestshare.data.RelaySettingsStore
 import com.peter.paperharvestshare.data.RelayTaskStatus
 import com.peter.paperharvestshare.data.TaskStore
 import com.peter.paperharvestshare.databinding.ActivitySubmissionStatusBinding
@@ -39,6 +40,7 @@ import java.util.UUID
 class SubmissionStatusActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySubmissionStatusBinding
     private lateinit var taskStore: TaskStore
+    private lateinit var settingsStore: RelaySettingsStore
     private val relayClient = RelayClient()
 
     private var workObserver: Observer<WorkInfo>? = null
@@ -59,6 +61,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
         SystemBarInsets.applyTo(binding.root)
 
         taskStore = TaskStore(this)
+        settingsStore = RelaySettingsStore(this)
         setupStaticTexts()
 
         val workId = intent.getStringExtra(EXTRA_WORK_ID)
@@ -236,7 +239,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
         observedRelayTaskId = relayTaskId
         relayPollingJob = lifecycleScope.launch {
             while (isActive) {
-                val result = relayClient.safeFetchTaskStatus(relayBaseUrl, relayTaskId)
+                val result = relayClient.safeFetchTaskStatus(relayBaseUrl, relayTaskId, settingsStore.currentRelayAuthToken())
                 val remoteStatus = result.status
                 if (result.success && remoteStatus != null) {
                     val updatedRecord = mergeRelayStatus(record.workId, remoteStatus)
@@ -465,7 +468,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
         val relayBaseUrl = record.relayBaseUrlSnapshot ?: return
         binding.cancelTaskButton.isEnabled = false
         lifecycleScope.launch {
-            val result = relayClient.safeCancelTask(relayBaseUrl, relayTaskId)
+            val result = relayClient.safeCancelTask(relayBaseUrl, relayTaskId, settingsStore.currentRelayAuthToken())
             val updated = if (result.success) {
                 val now = System.currentTimeMillis()
                 val nextRelayStatus = result.status?.status ?: "cancelling"

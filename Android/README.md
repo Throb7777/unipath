@@ -99,6 +99,8 @@ Common values:
   - `http://10.0.2.2:8080`
 - physical phone to local computer:
   - `http://<your-lan-ip>:8080`
+- physical phone to a computer on another network:
+  - `http://<your-tailscale-or-zerotier-ip>:8080`
 
 ### Step 3. Tap `Test Connection`
 
@@ -114,6 +116,29 @@ After the connection test succeeds, choose a Processing Mode.
 ### Step 5. Tap `Save`
 
 This stores the settings locally in the app.
+
+## 🌐 Use UniPATH on Different Networks
+
+If your phone and computer are not on the same Wi-Fi, keep the same UniPATH flow and switch only the relay address.
+
+Recommended approach:
+
+1. Install Tailscale on the computer that runs relay
+2. Install Tailscale on the Android phone
+3. Sign in to the same Tailscale account on both devices
+4. Make sure relay is listening on `0.0.0.0:8080`
+5. Copy the computer's Tailscale address
+6. In UniPATH **Settings**, choose **Private Network**
+7. Enter `http://<your-tailscale-ip>:8080`
+8. Tap **Test Connection**
+9. Choose a **Processing Mode**
+10. Tap **Save**
+
+Notes:
+
+- `0.0.0.0` is only a bind address for relay. Do not type it into the Android app.
+- `localhost` and `127.0.0.1` only work on the same device.
+- The same private-network setup also works for ZeroTier or another equivalent private network tool.
 
 ## 📱 How to Run a Real Test
 

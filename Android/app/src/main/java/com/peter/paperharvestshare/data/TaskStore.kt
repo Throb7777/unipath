@@ -190,6 +190,7 @@ class TaskStore(context: Context) {
         if (limit <= 1) {
             return value.take(limit)
         }
-        return value.take(limit - 1).trimEnd() + "…"
+        val previewLimit = if (limit > 3) limit - 3 else limit
+        return value.take(previewLimit).trimEnd() + "..."
     }
 }

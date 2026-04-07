@@ -6,6 +6,7 @@ import com.peter.paperharvestshare.BuildConfig
 import com.peter.paperharvestshare.model.ConnectionType
 import com.peter.paperharvestshare.model.RelayClientConfig
 import com.peter.paperharvestshare.model.RelayModeOption
+import com.peter.paperharvestshare.model.RelayServiceProfile
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -67,6 +68,41 @@ class RelaySettingsStore(context: Context) {
     fun selectedModeSummary(): String =
         selectedModeDescription()?.let { "${selectedModeLabel()}\n$it" } ?: selectedModeLabel()
 
+    fun savedProfiles(): List<RelayServiceProfile> {
+        val stored = loadSavedProfiles()
+        return if (stored.isNotEmpty()) {
+            stored
+        } else {
+            legacyCurrentProfile()?.let(::listOf).orEmpty()
+        }
+    }
+
+    fun currentProfileId(): String? =
+        prefs.getString(KEY_CURRENT_PROFILE_ID, null)?.ifBlank { null }
+
+    fun switchToProfile(profileId: String): Boolean {
+        val profile = loadSavedProfiles().firstOrNull { it.id == profileId } ?: return false
+        writeCurrentSelection(profile)
+        return true
+    }
+
+    fun deleteProfile(profileId: String): Boolean {
+        val remaining = loadSavedProfiles().filterNot { it.id == profileId }
+        val currentId = currentProfileId()
+        saveProfiles(remaining)
+        return when {
+            remaining.isEmpty() && currentId == profileId -> {
+                clearCurrentSelection()
+                true
+            }
+            currentId == profileId -> {
+                writeCurrentSelection(remaining.first())
+                true
+            }
+            else -> true
+        }
+    }
+
     fun saveSelection(
         relayBaseUrl: String,
         relayAuthToken: String,
@@ -75,6 +111,7 @@ class RelaySettingsStore(context: Context) {
         mode: RelayModeOption,
     ) {
         val normalizedBaseUrl = normalizeBaseUrl(relayBaseUrl)
+        val cachedConfigJson = configToJson(config).toString()
         prefs.edit()
             .putString(KEY_RELAY_BASE_URL, normalizedBaseUrl)
             .putString(KEY_RELAY_AUTH_TOKEN, relayAuthToken.trim())
@@ -85,18 +122,41 @@ class RelaySettingsStore(context: Context) {
             .putString(KEY_LAST_SERVICE_NAME, config.serviceName)
             .putString(KEY_LAST_SERVICE_VERSION, config.serviceVersion)
             .putString(KEY_CACHED_CONFIG_BASE_URL, normalizedBaseUrl)
-            .putString(KEY_CACHED_CONFIG_JSON, configToJson(config).toString())
+            .putString(KEY_CACHED_CONFIG_JSON, cachedConfigJson)
+            .putString(KEY_CURRENT_PROFILE_ID, buildProfileId(normalizedBaseUrl))
             .apply()
+        upsertProfile(
+            RelayServiceProfile(
+                id = buildProfileId(normalizedBaseUrl),
+                displayName = deriveProfileDisplayName(normalizedBaseUrl, config.serviceName),
+                relayBaseUrl = normalizedBaseUrl,
+                relayAuthToken = relayAuthToken.trim(),
+                connectionType = connectionType,
+                selectedModeId = mode.id,
+                selectedModeLabel = mode.label,
+                selectedModeDescription = mode.description,
+                lastServiceName = config.serviceName,
+                lastServiceVersion = config.serviceVersion,
+                cachedConfigJson = cachedConfigJson,
+            ),
+        )
     }
 
     fun saveClientConfig(relayBaseUrl: String, config: RelayClientConfig) {
         val normalizedBaseUrl = normalizeBaseUrl(relayBaseUrl)
+        val cachedConfigJson = configToJson(config).toString()
         prefs.edit()
             .putString(KEY_LAST_SERVICE_NAME, config.serviceName)
             .putString(KEY_LAST_SERVICE_VERSION, config.serviceVersion)
             .putString(KEY_CACHED_CONFIG_BASE_URL, normalizedBaseUrl)
-            .putString(KEY_CACHED_CONFIG_JSON, configToJson(config).toString())
+            .putString(KEY_CACHED_CONFIG_JSON, cachedConfigJson)
             .apply()
+        updateProfileMetadata(
+            buildProfileId(normalizedBaseUrl),
+            config.serviceName,
+            config.serviceVersion,
+            cachedConfigJson,
+        )
     }
 
     fun cachedClientConfigFor(relayBaseUrl: String): RelayClientConfig? {
@@ -133,7 +193,30 @@ class RelaySettingsStore(context: Context) {
             .remove(KEY_LAST_SERVICE_VERSION)
             .remove(KEY_CACHED_CONFIG_BASE_URL)
             .remove(KEY_CACHED_CONFIG_JSON)
+            .remove(KEY_CURRENT_PROFILE_ID)
             .apply()
+    }
+
+    fun updateSelectedMode(mode: RelayModeOption) {
+        prefs.edit()
+            .putString(KEY_SELECTED_MODE_ID, mode.id)
+            .putString(KEY_SELECTED_MODE_LABEL, mode.label)
+            .putString(KEY_SELECTED_MODE_DESCRIPTION, mode.description)
+            .apply()
+        currentProfileId()?.let { profileId ->
+            val updated = loadSavedProfiles().map { profile ->
+                if (profile.id == profileId) {
+                    profile.copy(
+                        selectedModeId = mode.id,
+                        selectedModeLabel = mode.label,
+                        selectedModeDescription = mode.description,
+                    )
+                } else {
+                    profile
+                }
+            }
+            saveProfiles(updated)
+        }
     }
 
     private fun configToJson(config: RelayClientConfig): JSONObject =
@@ -177,6 +260,143 @@ class RelaySettingsStore(context: Context) {
         )
     }
 
+    private fun upsertProfile(profile: RelayServiceProfile) {
+        val updated = loadSavedProfiles()
+            .filterNot { it.id == profile.id }
+            .plus(profile)
+            .sortedBy { it.displayName.lowercase() }
+        saveProfiles(updated)
+    }
+
+    private fun updateProfileMetadata(
+        profileId: String,
+        serviceName: String,
+        serviceVersion: String,
+        cachedConfigJson: String,
+    ) {
+        val updated = loadSavedProfiles().map { profile ->
+            if (profile.id == profileId) {
+                profile.copy(
+                    displayName = deriveProfileDisplayName(profile.relayBaseUrl, serviceName),
+                    lastServiceName = serviceName,
+                    lastServiceVersion = serviceVersion,
+                    cachedConfigJson = cachedConfigJson,
+                )
+            } else {
+                profile
+            }
+        }
+        if (updated.isNotEmpty()) {
+            saveProfiles(updated)
+        }
+    }
+
+    private fun loadSavedProfiles(): List<RelayServiceProfile> {
+        val raw = prefs.getString(KEY_SAVED_PROFILES_JSON, null).orEmpty()
+        if (raw.isBlank()) {
+            return emptyList()
+        }
+        val array = runCatching { JSONArray(raw) }.getOrNull() ?: return emptyList()
+        return buildList {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val relayBaseUrl = item.optString("relayBaseUrl").ifBlank { null } ?: continue
+                val id = item.optString("id").ifBlank { buildProfileId(relayBaseUrl) }
+                add(
+                    RelayServiceProfile(
+                        id = id,
+                        displayName = item.optString("displayName").ifBlank {
+                            deriveProfileDisplayName(relayBaseUrl, item.optString("lastServiceName"))
+                        },
+                        relayBaseUrl = normalizeBaseUrl(relayBaseUrl),
+                        relayAuthToken = item.optString("relayAuthToken"),
+                        connectionType = ConnectionType.fromStorage(item.optString("connectionType"))
+                            ?: inferConnectionType(relayBaseUrl),
+                        selectedModeId = item.optString("selectedModeId").ifBlank { null },
+                        selectedModeLabel = item.optString("selectedModeLabel").ifBlank { null },
+                        selectedModeDescription = item.optString("selectedModeDescription").ifBlank { null },
+                        lastServiceName = item.optString("lastServiceName").ifBlank { null },
+                        lastServiceVersion = item.optString("lastServiceVersion").ifBlank { null },
+                        cachedConfigJson = item.optString("cachedConfigJson").ifBlank { null },
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun saveProfiles(profiles: List<RelayServiceProfile>) {
+        val serialized = JSONArray(
+            profiles.map { profile ->
+                JSONObject()
+                    .put("id", profile.id)
+                    .put("displayName", profile.displayName)
+                    .put("relayBaseUrl", profile.relayBaseUrl)
+                    .put("relayAuthToken", profile.relayAuthToken)
+                    .put("connectionType", profile.connectionType.storageValue)
+                    .put("selectedModeId", profile.selectedModeId)
+                    .put("selectedModeLabel", profile.selectedModeLabel)
+                    .put("selectedModeDescription", profile.selectedModeDescription)
+                    .put("lastServiceName", profile.lastServiceName)
+                    .put("lastServiceVersion", profile.lastServiceVersion)
+                    .put("cachedConfigJson", profile.cachedConfigJson)
+            },
+        ).toString()
+        prefs.edit().putString(KEY_SAVED_PROFILES_JSON, serialized).apply()
+    }
+
+    private fun legacyCurrentProfile(): RelayServiceProfile? {
+        if (!hasSavedRelayBaseUrl()) {
+            return null
+        }
+        val relayBaseUrl = currentRelayBaseUrl()
+        return RelayServiceProfile(
+            id = buildProfileId(relayBaseUrl),
+            displayName = deriveProfileDisplayName(relayBaseUrl, prefs.getString(KEY_LAST_SERVICE_NAME, null)),
+            relayBaseUrl = relayBaseUrl,
+            relayAuthToken = currentRelayAuthToken(),
+            connectionType = currentConnectionType(),
+            selectedModeId = selectedModeId(),
+            selectedModeLabel = selectedModeLabel(),
+            selectedModeDescription = selectedModeDescription(),
+            lastServiceName = prefs.getString(KEY_LAST_SERVICE_NAME, null),
+            lastServiceVersion = prefs.getString(KEY_LAST_SERVICE_VERSION, null),
+            cachedConfigJson = prefs.getString(KEY_CACHED_CONFIG_JSON, null),
+        )
+    }
+
+    private fun writeCurrentSelection(profile: RelayServiceProfile) {
+        val normalizedBaseUrl = normalizeBaseUrl(profile.relayBaseUrl)
+        prefs.edit()
+            .putString(KEY_RELAY_BASE_URL, normalizedBaseUrl)
+            .putString(KEY_RELAY_AUTH_TOKEN, profile.relayAuthToken)
+            .putString(KEY_CONNECTION_TYPE, profile.connectionType.storageValue)
+            .putString(KEY_SELECTED_MODE_ID, profile.selectedModeId)
+            .putString(KEY_SELECTED_MODE_LABEL, profile.selectedModeLabel)
+            .putString(KEY_SELECTED_MODE_DESCRIPTION, profile.selectedModeDescription)
+            .putString(KEY_LAST_SERVICE_NAME, profile.lastServiceName)
+            .putString(KEY_LAST_SERVICE_VERSION, profile.lastServiceVersion)
+            .putString(KEY_CACHED_CONFIG_BASE_URL, normalizedBaseUrl)
+            .putString(KEY_CACHED_CONFIG_JSON, profile.cachedConfigJson)
+            .putString(KEY_CURRENT_PROFILE_ID, profile.id)
+            .apply()
+    }
+
+    private fun clearCurrentSelection() {
+        prefs.edit()
+            .remove(KEY_RELAY_BASE_URL)
+            .remove(KEY_RELAY_AUTH_TOKEN)
+            .remove(KEY_CONNECTION_TYPE)
+            .remove(KEY_SELECTED_MODE_ID)
+            .remove(KEY_SELECTED_MODE_LABEL)
+            .remove(KEY_SELECTED_MODE_DESCRIPTION)
+            .remove(KEY_LAST_SERVICE_NAME)
+            .remove(KEY_LAST_SERVICE_VERSION)
+            .remove(KEY_CACHED_CONFIG_BASE_URL)
+            .remove(KEY_CACHED_CONFIG_JSON)
+            .remove(KEY_CURRENT_PROFILE_ID)
+            .apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "relay_settings"
         private const val KEY_APP_LANGUAGE_TAG = "app_language_tag"
@@ -190,6 +410,8 @@ class RelaySettingsStore(context: Context) {
         private const val KEY_LAST_SERVICE_VERSION = "last_service_version"
         private const val KEY_CACHED_CONFIG_BASE_URL = "cached_config_base_url"
         private const val KEY_CACHED_CONFIG_JSON = "cached_config_json"
+        private const val KEY_SAVED_PROFILES_JSON = "saved_profiles_json"
+        private const val KEY_CURRENT_PROFILE_ID = "current_profile_id"
 
         fun normalizeBaseUrl(value: String): String =
             value.trim().trimEnd('/')
@@ -252,6 +474,22 @@ class RelaySettingsStore(context: Context) {
                 octets[0] == 172 && octets[1] in 16..31 -> true
                 octets[0] == 192 && octets[1] == 168 -> true
                 else -> false
+            }
+        }
+
+        fun buildProfileId(baseUrl: String): String =
+            normalizeBaseUrl(baseUrl).lowercase()
+
+        fun deriveProfileDisplayName(baseUrl: String, serviceName: String?): String {
+            val host = runCatching { Uri.parse(normalizeBaseUrl(baseUrl)).host.orEmpty() }.getOrDefault("")
+                .removePrefix("www.")
+                .ifBlank { normalizeBaseUrl(baseUrl) }
+            val cleanServiceName = serviceName.orEmpty().trim()
+            return when {
+                cleanServiceName.isBlank() -> host
+                cleanServiceName.equals("UniPATH Forwarding Service", ignoreCase = true) -> host
+                cleanServiceName.contains(host, ignoreCase = true) -> cleanServiceName
+                else -> "$cleanServiceName ($host)"
             }
         }
     }

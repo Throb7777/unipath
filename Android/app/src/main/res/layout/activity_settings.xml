@@ -168,28 +168,47 @@
                     android:textColor="@color/text_primary"
                     tools:text="Relay Auth Token" />
 
-                <EditText
-                    android:id="@+id/relayAuthInput"
-                    android:layout_width="match_parent"
+                <Button
+                    android:id="@+id/showAuthButton"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_panel"
-                    android:hint="@string/settings_service_auth_placeholder"
-                    android:inputType="textPassword"
-                    android:minHeight="56dp"
-                    android:padding="18dp"
-                    android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_secondary"
-                    tools:text="ui-test-token" />
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:textAllCaps="false"
+                    android:textColor="@color/link_blue"
+                    tools:text="Use auth token (optional)" />
 
-                <TextView
-                    android:id="@+id/serviceAuthHintText"
+                <LinearLayout
+                    android:id="@+id/serviceAuthContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                    android:textColor="@color/text_secondary"
-                    tools:text="Optional on local networks, but recommended for private or public relay access." />
+                    android:orientation="vertical">
+
+                    <EditText
+                        android:id="@+id/relayAuthInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_panel"
+                        android:hint="@string/settings_service_auth_placeholder"
+                        android:inputType="textPassword"
+                        android:minHeight="56dp"
+                        android:padding="18dp"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_secondary"
+                        tools:text="ui-test-token" />
+
+                    <TextView
+                        android:id="@+id/serviceAuthHintText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Optional on local networks, but recommended for private or public relay access." />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"

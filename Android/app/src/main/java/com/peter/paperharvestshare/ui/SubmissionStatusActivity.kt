@@ -16,6 +16,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.peter.paperharvestshare.R
 import com.peter.paperharvestshare.data.RelayClient
 import com.peter.paperharvestshare.data.RelaySettingsStore
@@ -77,6 +78,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
             finish()
         }
         binding.copyButton.setOnClickListener { copyCurrentResult() }
+        binding.viewDetailButton.setOnClickListener { showFullDetailDialog() }
         binding.cancelTaskButton.setOnClickListener { requestCancel() }
         binding.viewTimelineButton.setOnClickListener {
             currentWorkId?.let { workId ->
@@ -108,6 +110,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
         binding.manualVerificationBodyText.text = getString(R.string.manual_verification_panel_body)
         binding.suggestedActionsTitleText.text = getString(R.string.status_next_steps_label)
         binding.detailLabelText.text = getString(R.string.status_detail_label)
+        binding.viewDetailButton.text = getString(R.string.action_view_full_response)
         binding.timelineLabelText.text = getString(R.string.status_timeline_label)
         binding.viewTimelineButton.text = getString(R.string.action_view_full_flow)
         binding.taskLabelText.text = getString(R.string.status_task_label)
@@ -205,7 +208,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
         applyStep(binding.stepNormalizedDot, binding.stepNormalizedText, StepVisualState.DONE)
         applyStep(binding.stepSubmittingDot, binding.stepSubmittingText, uiState.submittingStep)
         applyStep(binding.stepAcceptedDot, binding.stepAcceptedText, uiState.acceptedStep)
-        binding.detailText.text = buildDetailMessage(record)
+        updateDetailPreview(buildDetailMessage(record))
     }
 
     private fun bindRelayBackedRecord(record: SubmissionRecord) {
@@ -221,7 +224,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
         applyStep(binding.stepNormalizedDot, binding.stepNormalizedText, StepVisualState.DONE)
         applyStep(binding.stepSubmittingDot, binding.stepSubmittingText, StepVisualState.DONE)
         applyStep(binding.stepAcceptedDot, binding.stepAcceptedText, relayStepState(record))
-        binding.detailText.text = buildDetailMessage(record)
+        updateDetailPreview(buildDetailMessage(record))
     }
 
     private fun maybeStartRelayPolling(record: SubmissionRecord) {
@@ -395,7 +398,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
         )
         if (localizedActions.isNotEmpty()) {
             binding.suggestedActionsPanel.visibility = View.VISIBLE
-            binding.suggestedActionsBodyText.text = localizedActions.joinToString("\n") { "• $it" }
+            binding.suggestedActionsBodyText.text = localizedActions.joinToString("\n") { "- $it" }
         } else {
             binding.suggestedActionsPanel.visibility = View.GONE
             binding.suggestedActionsBodyText.text = ""
@@ -423,11 +426,12 @@ class SubmissionStatusActivity : AppCompatActivity() {
         binding.statusText.setTextColor(ContextCompat.getColor(this, R.color.danger))
         binding.statusNoteText.text = getString(R.string.status_missing_work_id)
         binding.progressIndicator.progress = 0
-        binding.detailText.text = getString(R.string.status_missing_work_id)
+        updateDetailPreview(getString(R.string.status_missing_work_id))
         binding.taskValueText.text = getString(R.string.task_id_placeholder)
         binding.durationValueText.text = getString(R.string.status_duration_placeholder)
         updateTimelinePreview(null)
         binding.copyButton.isEnabled = false
+        binding.viewDetailButton.visibility = View.GONE
         binding.cancelTaskButton.visibility = View.GONE
         binding.cancelTaskButton.isEnabled = false
         binding.manualVerificationPanel.visibility = View.GONE
@@ -573,14 +577,9 @@ class SubmissionStatusActivity : AppCompatActivity() {
         val newViews = mutableListOf<View>()
         for (index in startIndex until lines.size) {
             val entryBinding = ViewTimelinePreviewEntryBinding.inflate(layoutInflater, binding.timelinePreviewContainer, false)
-            val parts = lines[index].split(Regex("\\s{2,}"), limit = 2)
-            if (parts.size == 2) {
-                entryBinding.timeText.text = parts[0]
-                entryBinding.labelText.text = UiText.localizeTimelineLabel(this, parts[1])
-            } else {
-                entryBinding.timeText.text = ""
-                entryBinding.labelText.text = UiText.localizeTimelineLabel(this, lines[index])
-            }
+            val (timeText, labelText) = parseTimelineLine(lines[index])
+            entryBinding.timeText.text = timeText
+            entryBinding.labelText.text = UiText.localizeTimelineLabel(this, labelText)
             binding.timelinePreviewContainer.addView(entryBinding.root)
             newViews += entryBinding.root
         }
@@ -620,6 +619,48 @@ class SubmissionStatusActivity : AppCompatActivity() {
         remoteStatus.timeline.joinToString("\n") { entry ->
             "${formatIsoDateTime(entry.at)}  ${entry.label}"
         }.ifBlank { getString(R.string.status_timeline_placeholder) }
+
+    private fun updateDetailPreview(detailText: String) {
+        binding.detailText.text = detailText
+        val shouldShowFull = detailText.length > DETAIL_PREVIEW_CHAR_LIMIT || detailText.count { it == '\n' } >= 3
+        binding.viewDetailButton.visibility = if (shouldShowFull) View.VISIBLE else View.GONE
+        binding.detailText.setOnClickListener(if (shouldShowFull) View.OnClickListener { showFullDetailDialog() } else null)
+    }
+
+    private fun showFullDetailDialog() {
+        val detail = binding.detailText.text?.toString().orEmpty().trim()
+        if (detail.isBlank()) {
+            return
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.status_detail_dialog_title))
+            .setMessage(detail)
+            .setPositiveButton(getString(R.string.action_copy_result)) { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("submission-response", detail))
+                Toast.makeText(this, getString(R.string.copy_done), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(getString(R.string.task_flow_close), null)
+            .show()
+    }
+
+    private fun parseTimelineLine(line: String): Pair<String, String> {
+        val spacedParts = line.split(Regex("\\s{2,}"), limit = 2)
+        if (spacedParts.size == 2) {
+            return spacedParts[0] to spacedParts[1]
+        }
+        val dottedParts = line.split(" \u00B7 ", limit = 2)
+        if (dottedParts.size == 2) {
+            val first = dottedParts[0]
+            val second = dottedParts[1]
+            return if (second.contains(':') && second.any { it.isDigit() }) {
+                second to first
+            } else {
+                "" to line
+            }
+        }
+        return "" to line
+    }
 
     private fun formatIsoDateTime(value: String): String =
         runCatching {
@@ -788,6 +829,7 @@ class SubmissionStatusActivity : AppCompatActivity() {
 
     companion object {
         private const val RELAY_POLL_INTERVAL_IDLE_MS = 5000L
+        private const val DETAIL_PREVIEW_CHAR_LIMIT = 220
         private val TIMELINE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         const val EXTRA_WORK_ID = "extra_work_id"
     }

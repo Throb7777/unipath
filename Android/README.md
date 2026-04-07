@@ -173,6 +173,23 @@ You can then check:
 
 Use **View Full Flow** when you want the complete step history.
 
+## UI Automation Helper
+
+For the Windows emulator workflow in this repository, you can also run:
+
+```powershell
+./scripts/run_android_ui_e2e.ps1
+```
+
+This helper will:
+
+- start a temporary mock relay
+- install the debug APK
+- inject relay test settings into the app
+- launch the Android share flow
+- submit a test link
+- verify that the relay task completes
+
 ## 🧭 What Each Screen Is For
 
 ### `Home`

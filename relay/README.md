@@ -342,6 +342,25 @@ Important:
 
 ## ✅ Verification
 
+## Custom Modes
+
+The first custom-mode workflow is now available on the relay **Settings** page.
+
+Current scope:
+
+- create lightweight custom modes directly in the Web UI
+- edit, duplicate, delete, and test them in the same page
+- run them through `shell_command`
+
+Each custom mode can keep its own:
+
+- label
+- description
+- timeout
+- command template
+
+Built-in modes and custom modes are available together in the same settings flow.
+
 Run relay tests:
 
 ```bash

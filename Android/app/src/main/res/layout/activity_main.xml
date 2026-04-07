@@ -72,13 +72,32 @@
                 android:orientation="vertical"
                 android:padding="18dp">
 
-                <TextView
-                    android:id="@+id/relayLabelText"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    android:textColor="@color/text_secondary"
-                    tools:text="Relay" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/relayLabelText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Relay" />
+
+                    <Button
+                        android:id="@+id/switchRelayButton"
+                        style="?attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="8dp"
+                        android:textAllCaps="false"
+                        android:textColor="@color/link_blue"
+                        tools:text="Switch" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/relayValueText"
@@ -104,14 +123,33 @@
                     android:layout_marginTop="16dp"
                     android:background="@color/surface_stroke" />
 
-                <TextView
-                    android:id="@+id/modeLabelText"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    android:textColor="@color/text_secondary"
-                    tools:text="Mode" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/modeLabelText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:textColor="@color/text_secondary"
+                        tools:text="Mode" />
+
+                    <Button
+                        android:id="@+id/switchModeButton"
+                        style="?attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="8dp"
+                        android:textAllCaps="false"
+                        android:textColor="@color/link_blue"
+                        tools:text="Choose" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/modeValueText"

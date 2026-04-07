@@ -60,16 +60,29 @@ class TaskFlowDialogFragment : DialogFragment() {
         binding.emptyText.visibility = View.GONE
         timelineLines.forEach { line ->
             val itemBinding = ViewTimelineEntryBinding.inflate(layoutInflater, binding.entriesContainer, false)
-            val parts = line.split(Regex("\\s{2,}"), limit = 2)
-            if (parts.size == 2) {
-                itemBinding.timeText.text = parts[0]
-                itemBinding.labelText.text = UiText.localizeTimelineLabel(requireContext(), parts[1])
-            } else {
-                itemBinding.timeText.text = ""
-                itemBinding.labelText.text = UiText.localizeTimelineLabel(requireContext(), line)
-            }
+            val (timeText, labelText) = parseTimelineLine(line)
+            itemBinding.timeText.text = timeText
+            itemBinding.labelText.text = UiText.localizeTimelineLabel(requireContext(), labelText)
             binding.entriesContainer.addView(itemBinding.root)
         }
+    }
+
+    private fun parseTimelineLine(line: String): Pair<String, String> {
+        val spacedParts = line.split(Regex("\\s{2,}"), limit = 2)
+        if (spacedParts.size == 2) {
+            return spacedParts[0] to spacedParts[1]
+        }
+        val dottedParts = line.split(" \u00B7 ", limit = 2)
+        if (dottedParts.size == 2) {
+            val first = dottedParts[0]
+            val second = dottedParts[1]
+            return if (second.contains(':') && second.any { it.isDigit() }) {
+                second to first
+            } else {
+                "" to line
+            }
+        }
+        return "" to line
     }
 
     companion object {

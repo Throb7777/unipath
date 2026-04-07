@@ -2,7 +2,13 @@ package com.peter.paperharvestshare.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.view.View
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import android.widget.RadioButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +26,7 @@ import com.peter.paperharvestshare.util.AppLanguage
 import com.peter.paperharvestshare.util.AppLanguageManager
 import com.peter.paperharvestshare.util.SystemBarInsets
 import kotlinx.coroutines.launch
+import android.graphics.Typeface
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
@@ -31,6 +38,7 @@ class SettingsActivity : AppCompatActivity() {
     private var lastStatusText: String? = null
     private var lastModeRenderKey: String? = null
     private var selectedLanguage: AppLanguage? = null
+    private var authOptionalExpanded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +57,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.saveSettingsButton.setOnClickListener { saveSettings() }
         binding.resetDefaultsButton.setOnClickListener { restoreDefaults() }
         binding.connectionTypeRadioGroup.setOnCheckedChangeListener { _, _ -> updateConnectionUi() }
+        binding.showAuthButton.setOnClickListener {
+            authOptionalExpanded = true
+            updateConnectionUi()
+        }
         binding.relayBaseUrlInput.doAfterTextChanged { updateConnectionUi() }
         binding.relayAuthInput.doAfterTextChanged { updateConnectionUi() }
     }
@@ -79,6 +91,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.testConnectionButton.text = getString(R.string.settings_test)
         binding.saveSettingsButton.text = getString(R.string.settings_save)
         binding.resetDefaultsButton.text = getString(R.string.settings_reset)
+        binding.showAuthButton.text = getString(R.string.settings_show_auth_optional)
     }
 
     private fun loadStoredState() {
@@ -90,11 +103,9 @@ class SettingsActivity : AppCompatActivity() {
         renderLanguageSelection()
         loadedConfig = settingsStore.cachedClientConfigFor(relayBaseUrl)
         loadedBaseUrl = relayBaseUrl.takeIf { loadedConfig != null }
+        authOptionalExpanded = settingsStore.currentRelayAuthToken().isNotBlank()
         updateConnectionUi()
-        renderStatus(
-            loadedConfig?.let { "${settingsStore.lastServiceSummary().orEmpty()}\n${getString(R.string.settings_service_ready)}" }
-                ?: (settingsStore.lastServiceSummary() ?: getString(R.string.settings_fetch_required)),
-        )
+        renderStatus(if (loadedConfig != null) getString(R.string.settings_service_ready) else getString(R.string.settings_fetch_required))
         renderModes(loadedConfig, settingsStore.selectedModeId())
     }
 
@@ -121,11 +132,7 @@ class SettingsActivity : AppCompatActivity() {
                     ?: config.modes.firstOrNull { it.id == config.defaultModeId && it.enabled }?.id
                     ?: config.modes.firstOrNull { it.enabled }?.id
                 renderModes(config, preferredModeId)
-                renderStatus(buildString {
-                    append(formatServiceSummary(config))
-                    append('\n')
-                    append(getString(R.string.settings_service_ready))
-                })
+                renderStatus(getString(R.string.settings_service_ready))
             } else {
                 renderModes(null, null)
                 renderStatus(result.message.ifBlank { getString(R.string.settings_fetch_failed) })
@@ -169,6 +176,7 @@ class SettingsActivity : AppCompatActivity() {
         loadedBaseUrl = null
         lastModeRenderKey = null
         lastStatusText = null
+        authOptionalExpanded = false
         loadStoredState()
     }
 
@@ -181,10 +189,13 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun renderConnectionSelection(connectionType: ConnectionType) {
-        when (connectionType) {
-            ConnectionType.EMULATOR -> binding.connectionEmulatorRadio.isChecked = true
-            ConnectionType.LOCAL_NETWORK -> binding.connectionLocalRadio.isChecked = true
-            ConnectionType.PRIVATE_NETWORK -> binding.connectionPrivateRadio.isChecked = true
+        val showEmulator = shouldShowEmulatorOption()
+        binding.connectionEmulatorRadio.visibility = if (showEmulator) View.VISIBLE else View.GONE
+        when {
+            connectionType == ConnectionType.EMULATOR && showEmulator -> binding.connectionEmulatorRadio.isChecked = true
+            connectionType == ConnectionType.LOCAL_NETWORK -> binding.connectionLocalRadio.isChecked = true
+            connectionType == ConnectionType.PRIVATE_NETWORK -> binding.connectionPrivateRadio.isChecked = true
+            else -> binding.connectionLocalRadio.isChecked = true
         }
     }
 
@@ -205,6 +216,12 @@ class SettingsActivity : AppCompatActivity() {
         binding.relayBaseUrlInput.hint = placeholder
         binding.serviceHintText.text = buildRelayAddressHint(connectionType)
         binding.serviceAuthHintText.text = buildRelayAuthHint(connectionType)
+        val shouldShowAuthFields = connectionType == ConnectionType.PRIVATE_NETWORK ||
+            binding.relayAuthInput.text?.toString().orEmpty().trim().isNotBlank() ||
+            authOptionalExpanded
+        binding.serviceAuthLabelText.visibility = if (shouldShowAuthFields) View.VISIBLE else View.GONE
+        binding.serviceAuthContainer.visibility = if (shouldShowAuthFields) View.VISIBLE else View.GONE
+        binding.showAuthButton.visibility = if (shouldShowAuthFields) View.GONE else View.VISIBLE
     }
 
     private fun buildRelayAddressHint(connectionType: ConnectionType): String {
@@ -268,17 +285,23 @@ class SettingsActivity : AppCompatActivity() {
         modes.forEach { mode ->
             val radioButton = RadioButton(this).apply {
                 id = View.generateViewId()
-                text = buildString {
-                    append(mode.label)
-                    if (mode.description.isNotBlank()) {
-                        append('\n')
-                        append(mode.description)
-                    }
-                }
+                text = buildModeText(mode)
                 tag = mode.id
                 setTextColor(getColor(com.peter.paperharvestshare.R.color.text_primary))
                 textSize = 15f
+                setLineSpacing(dp(4).toFloat(), 1f)
+                minimumHeight = dp(72)
+                setPadding(dp(12), dp(14), dp(12), dp(14))
             }
+            val params = android.widget.RadioGroup.LayoutParams(
+                android.widget.RadioGroup.LayoutParams.MATCH_PARENT,
+                android.widget.RadioGroup.LayoutParams.WRAP_CONTENT,
+            ).apply {
+                if (binding.modeRadioGroup.childCount > 0) {
+                    topMargin = dp(12)
+                }
+            }
+            radioButton.layoutParams = params
             binding.modeRadioGroup.addView(radioButton)
             if (mode.id == selectedModeId) {
                 radioButton.isChecked = true
@@ -328,6 +351,32 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun buildModeText(mode: RelayModeOption): CharSequence {
+        val label = com.peter.paperharvestshare.util.UiText.processingModeLabel(this, mode.id, mode.label)
+        if (mode.description.isBlank()) {
+            return label
+        }
+        return SpannableStringBuilder().apply {
+            append(label)
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append('\n')
+            val descriptionStart = length
+            append(mode.description)
+            setSpan(
+                ForegroundColorSpan(getColor(R.color.text_secondary)),
+                descriptionStart,
+                length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+            setSpan(
+                RelativeSizeSpan(0.92f),
+                descriptionStart,
+                length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+        }
+    }
+
     private fun applySelectedLanguageIfNeeded() {
         val nextLanguage = when (binding.languageRadioGroup.checkedRadioButtonId) {
             R.id.languageChineseRadio -> AppLanguage.SIMPLIFIED_CHINESE
@@ -345,15 +394,23 @@ class SettingsActivity : AppCompatActivity() {
         binding.resetDefaultsButton.isEnabled = !loading
         binding.relayBaseUrlInput.isEnabled = !loading
         binding.relayAuthInput.isEnabled = !loading
+        binding.showAuthButton.isEnabled = !loading
         binding.connectionEmulatorRadio.isEnabled = !loading
         binding.connectionLocalRadio.isEnabled = !loading
         binding.connectionPrivateRadio.isEnabled = !loading
     }
 
-    private fun formatServiceSummary(config: RelayClientConfig): String =
-        if (config.serviceVersion.isBlank()) {
-            config.serviceName
-        } else {
-            "${config.serviceName} ${config.serviceVersion}"
-        }
+    private fun shouldShowEmulatorOption(): Boolean =
+        com.peter.paperharvestshare.BuildConfig.DEBUG ||
+            settingsStore.currentConnectionType() == ConnectionType.EMULATOR ||
+            isProbablyEmulator()
+
+    private fun isProbablyEmulator(): Boolean =
+        Build.FINGERPRINT.contains("generic", ignoreCase = true) ||
+            Build.MODEL.contains("Emulator", ignoreCase = true) ||
+            Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
+            Build.PRODUCT.contains("sdk", ignoreCase = true)
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 }

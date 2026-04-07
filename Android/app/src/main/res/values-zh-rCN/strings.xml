@@ -26,7 +26,8 @@
     <string name="main_mode_saved_hint">你可以随时在设置里修改默认处理模式。</string>
     <string name="main_recent_label">近期任务</string>
     <string name="main_recent_hint">这里只保留最近 20 条任务。</string>
-    <string name="main_no_tasks_hint">分享一篇文章过来后，这里会显示近期任务。</string>
+    <string name="main_no_tasks_hint">把内容分享到 UniPATH 后，这里会显示近期任务。</string>
+    <string name="main_relay_connection_ready_hint">最近一次连接测试已经成功。你可以随时在设置里修改这个地址。</string>
     <string name="recent_target_unknown">分享链接</string>
     <string name="recent_status_received">已接收</string>
     <string name="recent_status_processing">处理中</string>
@@ -54,8 +55,14 @@
     <string name="action_clear">清空</string>
     <string name="action_cancel_task">中断任务</string>
     <string name="action_view_full_flow">查看完整流程</string>
+    <string name="action_view_full_response">查看完整返回</string>
+    <string name="action_manage">管理</string>
+    <string name="action_choose">选择</string>
+    <string name="action_use">使用</string>
+    <string name="action_delete">删除</string>
 
     <string name="status_detail_label">返回信息</string>
+    <string name="status_detail_dialog_title">完整返回信息</string>
     <string name="status_task_label">任务编号</string>
     <string name="status_timeline_label">处理步骤</string>
     <string name="status_next_steps_label">后续建议</string>
@@ -279,6 +286,7 @@
     <string name="settings_service_auth_hint_saved">这台手机已经保存了一枚转发服务 token。请确保它和 relay 当前使用的 AUTH_TOKEN 保持一致。</string>
     <string name="settings_service_auth_hint_private">私网 relay 通常需要和转发服务端相同的 AUTH_TOKEN。测试连接前，请先把它填在这里。</string>
     <string name="settings_service_auth_hint_private_ready">当前私网 relay 会使用这枚已保存的转发服务 token。修改地址或 token 后，请重新测试连接。</string>
+    <string name="settings_show_auth_optional">使用认证 Token（可选）</string>
     <string name="settings_service_hint_bind_note">0.0.0.0 只适合作为 relay 的监听地址，不能直接作为 Android 访问地址。</string>
     <string name="settings_service_hint_loopback_note">localhost 和 127.0.0.1 只在同一台设备上有效。Android 端应使用 10.0.2.2、局域网 IP 或私网地址。</string>
     <string name="settings_service_hint_private_with_lan">这个地址看起来仍是局域网地址。如果手机和电脑不在同一个网络，请改用 Tailscale、ZeroTier 或其他私网 relay 地址。</string>
@@ -287,4 +295,8 @@
     <string name="settings_invalid_loopback_address">localhost 和 127.0.0.1 只在同一台设备上有效。模拟器请用 10.0.2.2，真机请用电脑的局域网或私网 relay 地址。</string>
     <string name="main_relay_private_hint">如果手机和电脑不在同一个网络，请填写 Tailscale、ZeroTier 或其他私网 relay 地址。</string>
     <string name="main_relay_private_auth_hint">如果你正在使用私网 relay，请同时在设置里保存相同的 relay 认证 token，再去测试连接。</string>
+    <string name="main_saved_services_title">已保存的服务</string>
+    <string name="main_delete_service_title">删除已保存的服务</string>
+    <string name="main_delete_service_message">要从这台手机上删除“%1$s”吗？</string>
+    <string name="main_mode_picker_title">选择处理模式</string>
 </resources>

@@ -234,6 +234,7 @@ object UiText {
             "Preparing task" -> context.getString(R.string.timeline_label_preparing)
             "Opening browser" -> context.getString(R.string.timeline_label_opening_browser)
             "Running executor" -> context.getString(R.string.timeline_label_running_executor)
+            "Running processing method" -> context.getString(R.string.timeline_label_running_executor)
             "Finalizing result" -> context.getString(R.string.timeline_label_finalizing)
             "Completed" -> context.getString(R.string.timeline_label_completed)
             "Failed" -> context.getString(R.string.timeline_label_failed)
@@ -249,11 +250,11 @@ object UiText {
         }
         return when {
             line == "Highlights:" -> context.getString(R.string.summary_highlights)
-            line.startsWith("- Topic: ") -> "• ${context.getString(R.string.summary_topic)}${line.removePrefix("- Topic: ")}"
-            line.startsWith("- Takeaway: ") -> "• ${context.getString(R.string.summary_takeaway)}${line.removePrefix("- Takeaway: ")}"
-            line.startsWith("- Note: ") -> "• ${context.getString(R.string.summary_note)}${line.removePrefix("- Note: ")}"
-            line.startsWith("- Paper: ") -> "• ${context.getString(R.string.summary_paper)}${line.removePrefix("- Paper: ")}"
-            line.startsWith("- Possible: ") -> "• ${context.getString(R.string.summary_possible)}${line.removePrefix("- Possible: ")}"
+            line.startsWith("- Topic: ") -> "- ${context.getString(R.string.summary_topic)}${line.removePrefix("- Topic: ")}"
+            line.startsWith("- Takeaway: ") -> "- ${context.getString(R.string.summary_takeaway)}${line.removePrefix("- Takeaway: ")}"
+            line.startsWith("- Note: ") -> "- ${context.getString(R.string.summary_note)}${line.removePrefix("- Note: ")}"
+            line.startsWith("- Paper: ") -> "- ${context.getString(R.string.summary_paper)}${line.removePrefix("- Paper: ")}"
+            line.startsWith("- Possible: ") -> "- ${context.getString(R.string.summary_possible)}${line.removePrefix("- Possible: ")}"
             line == "Link processed successfully." -> context.getString(R.string.summary_link_processed)
             line == "No explicitly mentioned papers found." -> context.getString(R.string.summary_no_explicit_papers)
             line == "No clearly related papers found." -> context.getString(R.string.summary_no_related_papers)

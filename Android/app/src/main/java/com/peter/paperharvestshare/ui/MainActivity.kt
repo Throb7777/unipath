@@ -3,6 +3,7 @@
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -10,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.peter.paperharvestshare.R
 import com.peter.paperharvestshare.data.RelayClient
 import com.peter.paperharvestshare.data.RelayTaskStatus
@@ -17,6 +19,8 @@ import com.peter.paperharvestshare.data.RelaySettingsStore
 import com.peter.paperharvestshare.data.TaskStore
 import com.peter.paperharvestshare.databinding.ActivityMainBinding
 import com.peter.paperharvestshare.databinding.ViewRecentTaskBinding
+import com.peter.paperharvestshare.model.ConnectionType
+import com.peter.paperharvestshare.model.RelayModeOption
 import com.peter.paperharvestshare.model.SourceType
 import com.peter.paperharvestshare.model.SubmissionRecord
 import com.peter.paperharvestshare.model.TaskState
@@ -58,6 +62,8 @@ class MainActivity : AppCompatActivity() {
             lastRecentRenderKey = null
             renderRecentTasks()
         }
+        binding.switchRelayButton.setOnClickListener { showRelayProfilesDialog() }
+        binding.switchModeButton.setOnClickListener { showModeChooserDialog() }
         binding.settingsButton.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -85,6 +91,8 @@ class MainActivity : AppCompatActivity() {
         binding.recentHintText.text = getString(R.string.main_recent_hint)
         binding.clearTasksButton.text = getString(R.string.action_clear)
         binding.recentEmptyText.text = getString(R.string.main_no_tasks_hint)
+        binding.switchRelayButton.text = getString(R.string.action_manage)
+        binding.switchModeButton.text = getString(R.string.action_choose)
     }
 
     private fun renderCurrentConfig() {
@@ -104,6 +112,7 @@ class MainActivity : AppCompatActivity() {
         binding.relayHintText.text = relayDisplay.hint
         binding.modeValueText.text = modeDisplay.title
         binding.modeHintText.text = modeDisplay.hint
+        binding.switchModeButton.visibility = if (currentAvailableModes().isEmpty()) View.GONE else View.VISIBLE
         lastConfigRenderKey = renderKey
     }
 
@@ -111,7 +120,8 @@ class MainActivity : AppCompatActivity() {
         if (!settingsStore.hasSavedRelayBaseUrl()) {
             val hint = buildString {
                 append(getString(R.string.main_relay_not_set_hint))
-                if (settingsStore.currentConnectionType() == com.peter.paperharvestshare.model.ConnectionType.EMULATOR &&
+                if (shouldShowEmulatorOption() &&
+                    settingsStore.currentConnectionType() == ConnectionType.EMULATOR &&
                     settingsStore.currentRelayBaseUrl().startsWith("http://10.0.2.2")
                 ) {
                     append("\n")
@@ -124,14 +134,14 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        val hint = settingsStore.lastServiceSummary()?.let {
-            getString(R.string.main_relay_connected_hint, it)
-        } ?: when {
-            settingsStore.currentConnectionType() == com.peter.paperharvestshare.model.ConnectionType.PRIVATE_NETWORK &&
+        val hint = when {
+            settingsStore.currentConnectionType() == ConnectionType.PRIVATE_NETWORK &&
                 settingsStore.currentRelayAuthToken().isBlank() ->
                 getString(R.string.main_relay_private_auth_hint)
-            settingsStore.currentConnectionType() == com.peter.paperharvestshare.model.ConnectionType.PRIVATE_NETWORK ->
+            settingsStore.currentConnectionType() == ConnectionType.PRIVATE_NETWORK ->
                 getString(R.string.main_relay_private_hint)
+            settingsStore.lastServiceSummary() != null ->
+                getString(R.string.main_relay_connection_ready_hint)
             else -> getString(R.string.main_relay_saved_hint)
         }
         return ConfigDisplay(
@@ -162,6 +172,12 @@ class MainActivity : AppCompatActivity() {
             hint = modeHint,
         )
     }
+
+    private fun currentAvailableModes(): List<RelayModeOption> =
+        settingsStore.cachedClientConfigFor(settingsStore.currentRelayBaseUrl())
+            ?.modes
+            ?.filter { it.enabled }
+            .orEmpty()
 
     private fun renderRecentTasks() {
         val records = taskStore.listRecent(TaskStore.MAX_RECORDS)
@@ -296,7 +312,9 @@ class MainActivity : AppCompatActivity() {
     private fun buildMetaSummary(record: SubmissionRecord): String {
         val parts = mutableListOf(formatRelativeTime(record.updatedAtEpochMs))
         buildDurationSummary(record)?.let(parts::add)
-        record.modeLabelSnapshot?.takeIf { it.isNotBlank() }?.let(parts::add)
+        record.modeIdSnapshot?.takeIf { it.isNotBlank() }?.let { modeId ->
+            parts.add(UiText.processingModeLabel(this, modeId, record.modeLabelSnapshot))
+        }
         record.relayTaskId?.takeIf { it.isNotBlank() }?.let { parts.add(UiText.taskIdLabel(this, it)) }
         return parts.joinToString(" | ")
     }
@@ -460,7 +478,7 @@ class MainActivity : AppCompatActivity() {
     private fun buildTimelineSummary(status: RelayTaskStatus): String =
         status.timeline.joinToString("\n") { entry ->
             val timeText = formatIsoDateTime(entry.at)
-            "${entry.label} · ${timeText}"
+            "$timeText  ${entry.label}"
         }
 
     private fun formatIsoDateTime(value: String): String =
@@ -479,5 +497,103 @@ class MainActivity : AppCompatActivity() {
         val title: String,
         val hint: String,
     )
+
+    private fun showRelayProfilesDialog() {
+        val profiles = settingsStore.savedProfiles()
+        if (profiles.isEmpty()) {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            return
+        }
+        var selectedIndex = profiles.indexOfFirst { it.id == settingsStore.currentProfileId() }.coerceAtLeast(0)
+        val items = profiles.map { profile ->
+            buildString {
+                append(profile.displayName)
+                append('\n')
+                append(profile.relayBaseUrl)
+            }
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.main_saved_services_title))
+            .setSingleChoiceItems(items, selectedIndex) { _, which ->
+                selectedIndex = which
+            }
+            .setPositiveButton(getString(R.string.action_use)) { _, _ ->
+                if (profiles.indices.contains(selectedIndex) && settingsStore.switchToProfile(profiles[selectedIndex].id)) {
+                    lastConfigRenderKey = null
+                    lastRecentRenderKey = null
+                    renderCurrentConfig()
+                    renderRecentTasks()
+                }
+            }
+            .setNeutralButton(getString(R.string.action_delete)) { _, _ ->
+                showDeleteRelayProfileDialog(profiles, selectedIndex)
+            }
+            .setNegativeButton(getString(R.string.settings_entry)) { _, _ ->
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
+            .show()
+    }
+
+    private fun showDeleteRelayProfileDialog(profiles: List<com.peter.paperharvestshare.model.RelayServiceProfile>, selectedIndex: Int) {
+        if (!profiles.indices.contains(selectedIndex)) {
+            return
+        }
+        val profile = profiles[selectedIndex]
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.main_delete_service_title))
+            .setMessage(getString(R.string.main_delete_service_message, profile.displayName))
+            .setPositiveButton(getString(R.string.action_delete)) { _, _ ->
+                settingsStore.deleteProfile(profile.id)
+                lastConfigRenderKey = null
+                renderCurrentConfig()
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private fun showModeChooserDialog() {
+        val modes = currentAvailableModes()
+        if (modes.isEmpty()) {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            return
+        }
+        var selectedIndex = modes.indexOfFirst { it.id == settingsStore.selectedModeId() }.coerceAtLeast(0)
+        val items = modes.map { mode ->
+            buildString {
+                append(UiText.processingModeLabel(this@MainActivity, mode.id, mode.label))
+                if (mode.description.isNotBlank()) {
+                    append('\n')
+                    append(mode.description)
+                }
+            }
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.main_mode_picker_title))
+            .setSingleChoiceItems(items, selectedIndex) { _, which ->
+                selectedIndex = which
+            }
+            .setPositiveButton(getString(R.string.action_use)) { _, _ ->
+                if (modes.indices.contains(selectedIndex)) {
+                    settingsStore.updateSelectedMode(modes[selectedIndex])
+                    lastConfigRenderKey = null
+                    lastRecentRenderKey = null
+                    renderCurrentConfig()
+                    renderRecentTasks()
+                }
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private fun shouldShowEmulatorOption(): Boolean =
+        com.peter.paperharvestshare.BuildConfig.DEBUG ||
+            settingsStore.currentConnectionType() == ConnectionType.EMULATOR ||
+            isProbablyEmulator()
+
+    private fun isProbablyEmulator(): Boolean =
+        Build.FINGERPRINT.contains("generic", ignoreCase = true) ||
+            Build.MODEL.contains("Emulator", ignoreCase = true) ||
+            Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
+            Build.PRODUCT.contains("sdk", ignoreCase = true)
 }
 

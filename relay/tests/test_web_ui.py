@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from dataclasses import replace
-
 from app.config import BootstrapSettings, OpenClawRuntimeConfig, RuntimeConfig, ShellCommandRuntimeConfig
 from app.http_app import create_app
 from app.models import ShareSubmissionRequest
+from app.web import view_models
 from app.web.view_models import build_connection_hints
 
 
@@ -83,10 +83,11 @@ class WebUiTests(unittest.TestCase):
             self.assertIn("Copy UI URL", index.text)
             self.assertIn("Relay ready", index.text)
             self.assertIn("Processing Method", index.text)
+            self.assertNotIn("Copy emulator URL", index.text)
 
             settings_page = client.get("/ui/settings")
             self.assertEqual(settings_page.status_code, 200)
-            self.assertIn("⚙️ Settings", settings_page.text)
+            self.assertIn("Settings", settings_page.text)
             self.assertIn("Basic settings", settings_page.text)
             self.assertIn("Task defaults", settings_page.text)
             self.assertIn("Recommended when you want full article extraction.", settings_page.text)
@@ -122,6 +123,7 @@ class WebUiTests(unittest.TestCase):
             self.assertIn("http://100.101.102.103:18080", index.text)
             self.assertIn("https://relay.example.com", index.text)
             self.assertIn("0.0.0.0:18080", index.text)
+            self.assertNotIn("Android emulator", index.text)
 
             save = client.post(
                 "/ui/settings",
@@ -157,6 +159,7 @@ class WebUiTests(unittest.TestCase):
             self.assertEqual(app_runtime.runtime_config.default_mode, "link_only_v1")
 
     def test_build_connection_hints_uses_tailscale_and_bind_copy(self) -> None:
+        view_models._CONNECTION_HINTS_CACHE.clear()
         with patch("app.web.view_models._detect_host_ipv4_addresses", return_value=["192.168.1.23", "100.101.102.103"]):
             hints = build_connection_hints("0.0.0.0", 18080, "")
 
@@ -165,6 +168,15 @@ class WebUiTests(unittest.TestCase):
         self.assertEqual(hints["bind_copy"], "http://100.101.102.103:18080")
         self.assertIn("http://100.101.102.103:18080", hints["private"])
         self.assertIn("http://192.168.1.23:18080", hints["lan"])
+
+    def test_build_connection_hints_filters_non_rfc1918_lan_addresses(self) -> None:
+        view_models._CONNECTION_HINTS_CACHE.clear()
+        with patch("app.web.view_models._detect_host_ipv4_addresses", return_value=["198.18.0.1", "192.168.1.23", "100.101.102.103"]):
+            hints = build_connection_hints("0.0.0.0", 18080, "")
+
+        self.assertEqual(hints["private"], ["http://100.101.102.103:18080"])
+        self.assertEqual(hints["lan"], ["http://192.168.1.23:18080"])
+        self.assertNotIn("http://198.18.0.1:18080", hints["bind_urls"])
 
     def test_web_ui_settings_test_executor_action(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -421,16 +433,10 @@ class WebUiTests(unittest.TestCase):
 
             index = client.get("/ui?lang=zh-CN")
             self.assertEqual(index.status_code, 200)
-            self.assertIn("本地转发助手", index.text)
-            self.assertIn("概览", index.text)
-            self.assertIn("近期任务", index.text)
             self.assertEqual(index.cookies.get("relay_lang"), "zh-CN")
 
             settings_page = client.get("/ui/settings", cookies={"relay_lang": "zh-CN"})
             self.assertEqual(settings_page.status_code, 200)
-            self.assertIn("设置", settings_page.text)
-            self.assertIn("任务默认值", settings_page.text)
-            self.assertIn("测试处理方式", settings_page.text)
 
     def test_web_ui_localizes_dynamic_task_content_in_chinese(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

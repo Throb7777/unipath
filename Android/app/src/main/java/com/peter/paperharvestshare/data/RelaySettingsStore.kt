@@ -297,8 +297,14 @@ class RelaySettingsStore(context: Context) {
     ) {
         val updated = loadSavedProfiles().map { profile ->
             if (profile.id == profileId) {
+                val existingDerived = deriveProfileDisplayName(profile.relayBaseUrl, profile.lastServiceName)
+                val replacementDerived = deriveProfileDisplayName(profile.relayBaseUrl, serviceName)
                 profile.copy(
-                    displayName = deriveProfileDisplayName(profile.relayBaseUrl, serviceName),
+                    displayName = when {
+                        profile.displayName.isBlank() -> replacementDerived
+                        profile.displayName == existingDerived -> replacementDerived
+                        else -> profile.displayName
+                    },
                     lastServiceName = serviceName,
                     lastServiceVersion = serviceVersion,
                     cachedConfigJson = cachedConfigJson,

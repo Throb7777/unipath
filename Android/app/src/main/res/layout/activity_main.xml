@@ -218,11 +218,14 @@
                 android:textColor="@color/text_secondary"
                 tools:text="Recent tasks will appear here." />
 
-            <LinearLayout
-                android:id="@+id/recentTasksContainer"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recentTasksRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:layout_marginTop="4dp"
+                android:nestedScrollingEnabled="false"
+                tools:itemCount="2"
+                tools:listitem="@layout/view_recent_task" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

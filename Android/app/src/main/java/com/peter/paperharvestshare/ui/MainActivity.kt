@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.WindowCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.peter.paperharvestshare.R
@@ -18,7 +19,6 @@ import com.peter.paperharvestshare.data.RelayTaskStatus
 import com.peter.paperharvestshare.data.RelaySettingsStore
 import com.peter.paperharvestshare.data.TaskStore
 import com.peter.paperharvestshare.databinding.ActivityMainBinding
-import com.peter.paperharvestshare.databinding.ViewRecentTaskBinding
 import com.peter.paperharvestshare.model.ConnectionType
 import com.peter.paperharvestshare.model.RelayModeOption
 import com.peter.paperharvestshare.model.SourceType
@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private var lastRecentRenderKey: String? = null
     private var recentSyncJob: Job? = null
     private val recentSyncTimestamps = mutableMapOf<String, Long>()
+    private lateinit var recentTasksAdapter: RecentTasksAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +57,14 @@ class MainActivity : AppCompatActivity() {
 
         taskStore = TaskStore(this)
         settingsStore = RelaySettingsStore(this)
+        recentTasksAdapter = RecentTasksAdapter(this) { record ->
+            startActivity(
+                Intent(this, SubmissionStatusActivity::class.java)
+                    .putExtra(SubmissionStatusActivity.EXTRA_WORK_ID, record.workId),
+            )
+        }
+        binding.recentTasksRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.recentTasksRecyclerView.adapter = recentTasksAdapter
         setupStaticTexts()
         binding.clearTasksButton.setOnClickListener {
             taskStore.clear()
@@ -199,50 +208,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        binding.recentTasksContainer.removeAllViews()
-
         val hasTasks = records.isNotEmpty()
         binding.recentHintText.text = buildRecentHint()
         binding.recentEmptyText.visibility = if (hasTasks) View.GONE else View.VISIBLE
+        binding.recentTasksRecyclerView.visibility = if (hasTasks) View.VISIBLE else View.GONE
         binding.clearTasksButton.visibility = if (hasTasks) View.VISIBLE else View.GONE
 
         if (!hasTasks) {
             binding.recentEmptyText.text = getString(R.string.main_no_tasks_hint)
+            recentTasksAdapter.submitList(emptyList())
             lastRecentRenderKey = renderKey
             return
         }
-
-        records.forEach { record ->
-            val itemBinding = ViewRecentTaskBinding.inflate(layoutInflater, binding.recentTasksContainer, false)
-            bindRecentTask(itemBinding, record)
-            binding.recentTasksContainer.addView(itemBinding.root)
-        }
+        recentTasksAdapter.submitList(records)
         lastRecentRenderKey = renderKey
-    }
-
-    private fun bindRecentTask(itemBinding: ViewRecentTaskBinding, record: SubmissionRecord) {
-        val (sourceLabel, sourceBackground, sourceForeground) = when (record.sourceType) {
-            SourceType.WECHAT_ARTICLE -> Triple(UiText.sourceLabel(this, record.sourceType), R.color.success_soft, R.color.success)
-            SourceType.XIAOHONGSHU -> Triple(UiText.sourceLabel(this, record.sourceType), R.color.danger_soft, R.color.danger)
-            SourceType.UNKNOWN -> Triple(UiText.sourceLabel(this, record.sourceType), R.color.pending_soft, R.color.pending)
-        }
-        val (stateLabel, stateBackground, stateForeground) = stateAppearance(record)
-
-        itemBinding.sourceChipText.text = sourceLabel
-        itemBinding.stateChipText.text = stateLabel
-        itemBinding.serialText.text = "#${record.sequenceNumber}"
-        tintChip(itemBinding.sourceChipText, sourceBackground, sourceForeground)
-        tintChip(itemBinding.stateChipText, stateBackground, stateForeground)
-
-        itemBinding.targetText.text = buildTargetSummary(record)
-        itemBinding.messageText.text = buildMessageSummary(record)
-        itemBinding.timeText.text = buildMetaSummary(record)
-        itemBinding.root.setOnClickListener {
-            startActivity(
-                Intent(this, SubmissionStatusActivity::class.java)
-                    .putExtra(SubmissionStatusActivity.EXTRA_WORK_ID, record.workId),
-            )
-        }
     }
 
     private fun tintChip(view: TextView, backgroundColorRes: Int, foregroundColorRes: Int) {
@@ -265,7 +244,7 @@ class MainActivity : AppCompatActivity() {
         return host
     }
 
-    private fun buildMessageSummary(record: SubmissionRecord): String =
+    internal fun buildMessageSummaryForAdapter(record: SubmissionRecord): String =
         buildRelayAdviceSummary(record) ?: when (record.relayErrorCodeSnapshot) {
             "manual_verification_required" -> getString(R.string.manual_verification_note)
             "profile_revalidation_required" -> getString(R.string.profile_revalidation_note)
@@ -346,7 +325,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun stateAppearance(record: SubmissionRecord): Triple<String, Int, Int> =
+    internal fun stateAppearanceForAdapter(record: SubmissionRecord): Triple<String, Int, Int> =
         when (record.relayStatusSnapshot) {
             "completed" -> Triple(getString(R.string.recent_status_completed), R.color.success_soft, R.color.success)
             "failed" -> Triple(getString(R.string.recent_status_failed), R.color.danger_soft, R.color.danger)
@@ -505,13 +484,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
             return
         }
-        var selectedIndex = profiles.indexOfFirst { it.id == settingsStore.currentProfileId() }.coerceAtLeast(0)
-        val items = profiles.map { profile ->
-            buildString {
-                append(profile.displayName)
-                append('\n')
-                append(profile.relayBaseUrl)
-            }
+        val currentId = settingsStore.currentProfileId()
+        val sortedProfiles = profiles.sortedWith(
+            compareByDescending<com.peter.paperharvestshare.model.RelayServiceProfile> { it.id == currentId }
+                .thenBy { it.displayName.lowercase() },
+        )
+        var selectedIndex = sortedProfiles.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
+        val items = sortedProfiles.map { profile ->
+            profileLine(profile, profile.id == currentId)
         }.toTypedArray()
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.main_saved_services_title))
@@ -519,7 +499,7 @@ class MainActivity : AppCompatActivity() {
                 selectedIndex = which
             }
             .setPositiveButton(getString(R.string.action_use)) { _, _ ->
-                if (profiles.indices.contains(selectedIndex) && settingsStore.switchToProfile(profiles[selectedIndex].id)) {
+                if (sortedProfiles.indices.contains(selectedIndex) && settingsStore.switchToProfile(sortedProfiles[selectedIndex].id)) {
                     lastConfigRenderKey = null
                     lastRecentRenderKey = null
                     renderCurrentConfig()
@@ -527,12 +507,32 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .setNeutralButton(getString(R.string.action_delete)) { _, _ ->
-                showDeleteRelayProfileDialog(profiles, selectedIndex)
+                showDeleteRelayProfileDialog(sortedProfiles, selectedIndex)
             }
             .setNegativeButton(getString(R.string.settings_entry)) { _, _ ->
                 startActivity(Intent(this, SettingsActivity::class.java))
             }
             .show()
+    }
+
+    private fun profileLine(
+        profile: com.peter.paperharvestshare.model.RelayServiceProfile,
+        isCurrent: Boolean,
+    ): CharSequence {
+        val connectionLabel = when (profile.connectionType) {
+            ConnectionType.EMULATOR -> getString(R.string.settings_connection_type_emulator)
+            ConnectionType.LOCAL_NETWORK -> getString(R.string.settings_connection_type_local)
+            ConnectionType.PRIVATE_NETWORK -> getString(R.string.settings_connection_type_private)
+        }
+        val prefix = if (isCurrent) "• " else ""
+        return buildString {
+            append(prefix)
+            append(profile.displayName)
+            append('\n')
+            append(connectionLabel)
+            append(" · ")
+            append(profile.relayBaseUrl)
+        }
     }
 
     private fun showDeleteRelayProfileDialog(profiles: List<com.peter.paperharvestshare.model.RelayServiceProfile>, selectedIndex: Int) {

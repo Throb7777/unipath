@@ -3,14 +3,250 @@ from __future__ import annotations
 from datetime import datetime
 import ipaddress
 from pathlib import Path
+import re
 import shutil
 import socket
 import subprocess
+import time
 from typing import Iterable
 from urllib.parse import urlparse
 
 from app.models import TaskRecord
 from app.user_facing import advice_for_error, result_summary_for_output
+
+_DETECTED_ADDRESS_CACHE: tuple[float, list[str]] | None = None
+_TAILSCALE_ADDRESS_CACHE: tuple[float, list[str]] | None = None
+_CONNECTION_HINTS_CACHE: dict[tuple[str, int, str], tuple[float, dict[str, object]]] = {}
+_ADDRESS_CACHE_TTL_SECONDS = 10.0
+_CONNECTION_HINTS_CACHE_TTL_SECONDS = 10.0
+_RFC1918_LAN_NETWORKS = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+)
+_PRIVATE_OVERLAY_NETWORKS = (
+    ipaddress.ip_network("100.64.0.0/10"),
+)
+
+_RESULT_SUMMARY_LINE_MAP_ZH = {
+    "Highlights:": "要点：",
+    "Link processed successfully.": "链接已处理完成。",
+    "No explicitly mentioned papers found.": "未发现文中明确提到的论文。",
+    "No clearly related papers found.": "未发现明显相关的论文。",
+}
+
+_DYNAMIC_TEXT_MAP_ZH = {
+    "ok": "正常",
+    "warning": "警告",
+    "blocked": "阻塞",
+    "Remote or private-network access is not ready": "异网或私网访问尚未准备好",
+    "Remote or private-network access still needs protection": "异网或私网访问仍缺少保护",
+    "Remote or private-network access looks ready": "异网或私网访问看起来已经就绪",
+    "Set HOST=0.0.0.0 or another reachable interface before using a phone or private-network client.": "在手机或私网客户端接入前，请先把 HOST 设成 0.0.0.0 或其他可访问接口。",
+    "Keep AUTH_TOKEN enabled before exposing relay beyond the local machine.": "在 relay 暴露到本机以外之前，请保持 AUTH_TOKEN 已启用。",
+    "Set AUTH_TOKEN before using relay from another device, a Tailscale network, or a public URL.": "在其他设备、Tailscale 网络或公网地址访问 relay 之前，请先配置 AUTH_TOKEN。",
+    "Retest the Android connection after saving the token and updating the app settings.": "保存 token 并更新 Android 设置后，请重新测试一次连接。",
+    "Relay is ready.": "转发服务已经就绪。",
+    "Relay is running with setup warnings.": "转发服务正在运行，但仍有配置提醒。",
+    "Relay is blocked by an environment issue.": "转发服务被环境问题阻塞。",
+    "Runtime": "运行环境",
+    "Configuration": "配置",
+    "Processing Method": "处理方式",
+    "Runtime directory is ready": "运行目录已经就绪",
+    "Runtime directory is not writable": "运行目录不可写",
+    "Database is ready": "数据库已经就绪",
+    "Database is not ready": "数据库尚未就绪",
+    "Web UI is enabled": "Web 界面已启用",
+    "Web UI is disabled": "Web 界面已禁用",
+    "Processing method looks ready": "处理方式看起来已经就绪",
+    "Selected processing method needs setup": "当前处理方式仍需配置",
+    "Processing command was not found": "未找到处理命令",
+    "Command template is missing": "命令模板尚未配置",
+    "Processing could not start": "无法启动处理方式",
+    "Processing timed out": "处理已超时",
+    "Processing method is busy": "处理方式正忙",
+    "Network or provider request failed": "网络或上游请求失败",
+    "Authentication is not ready": "认证尚未准备好",
+    "Processing command exited with an error": "处理命令返回错误",
+    "Processing method reported a failure": "处理方式返回了失败结果",
+    "Manual verification required": "需要手动验证",
+    "Managed browser needs verification again": "需要重新验证受管浏览器",
+    "WeChat link is no longer valid": "微信链接已经失效",
+    "Article body was too short": "文章正文过短",
+    "The current OpenClaw lane is already being used by another task.": "当前 OpenClaw 通道正被其他任务占用。",
+    "The processing method could not reach its upstream service.": "处理方式无法访问上游服务。",
+    "The selected processing method is missing valid authentication.": "当前处理方式缺少有效认证。",
+    "The task ran longer than the configured timeout window.": "任务运行时间超过了当前超时设置。",
+    "Relay could not launch the selected processing method.": "relay 无法启动当前处理方式。",
+    "Relay could not resolve the configured command on this machine.": "relay 无法在当前机器上解析已配置的命令。",
+    "The shell-command processing method does not have a command template yet.": "命令处理方式尚未配置命令模板。",
+    "The selected processing method started, but returned a failure code.": "处理方式已经启动，但返回了失败退出码。",
+    "The task finished, but the processing method reported a failed result.": "任务已经结束，但处理方式返回了失败结果。",
+    "Open the article in the managed browser and finish the verification step.": "请在受管浏览器中打开文章并完成验证步骤。",
+    "Submit the task again after verification succeeds.": "验证完成后，再重新提交任务。",
+    "Open the article again in the managed browser profile.": "请在受管浏览器 profile 中重新打开这篇文章。",
+    "Complete verification or sign in again, then retry the task.": "重新完成验证或登录后，再重试任务。",
+    "Go back to the original article and share the article link again.": "请回到原始文章页面，重新分享原文链接。",
+    "Avoid shortened or expired share pages when resubmitting.": "重新提交时尽量避免使用已失效或被缩短的分享页。",
+    "Open the article once in the managed browser and make sure it loads fully.": "请先在受管浏览器中打开文章，并确认正文已完整加载。",
+    "Retry the task after the article body is visible.": "正文可见后，再重新重试任务。",
+    "Wait for the current run to finish and let the relay retry automatically.": "请等待当前任务结束，让 relay 自动重试。",
+    "Avoid starting multiple tasks against the same OpenClaw target at the same time.": "尽量避免同时对同一个 OpenClaw 目标发起多条任务。",
+    "Check the current network or proxy settings on this machine.": "请检查本机当前的网络或代理设置。",
+    "Retry the task after the network path is stable again.": "网络恢复稳定后，再重试任务。",
+    "Check the local tool login or API key configuration.": "请检查本地工具的登录状态或 API Key 配置。",
+    "Run the diagnostics view or relay doctor before retrying.": "重试前，建议先打开诊断页或运行 relay doctor。",
+    "Retry the task once to confirm whether the timeout was temporary.": "可以先重试一次，确认这次超时是否只是临时问题。",
+    "Increase the timeout only if this task type is expected to run longer.": "只有在这类任务本来就会运行更久时，才建议调大超时时间。",
+    "Check the configured command path and local tool installation.": "请检查命令路径和本地工具安装是否正确。",
+    "Use relay doctor or Web UI Diagnostics to confirm the environment.": "可先运行 relay doctor 或打开 Web 诊断页确认环境。",
+    "Set the correct command path in Settings.": "请到设置里填写正确的命令路径。",
+    "Switch to the mock or shell-command processing method if you only need a smoke test.": "如果只是做冒烟测试，可以改用模拟处理方式或命令处理方式。",
+    "Open Settings and add a trusted command template.": "请到设置中补充一条可信的命令模板。",
+    "Switch to another processing method if you do not plan to use a custom command.": "如果暂时不打算用自定义命令，可以切换到其他处理方式。",
+    "Open the task files and inspect stdout.txt and stderr.txt.": "请打开任务文件，检查 stdout.txt 和 stderr.txt。",
+    "Fix the underlying command error, then retry the task.": "修正底层命令错误后，再重试任务。",
+    "Review the result summary and task files for the reported reason.": "请先查看结果摘要和任务文件，确认失败原因。",
+    "Retry only after confirming the cause is temporary or corrected.": "只有确认原因是临时问题或已经修正后，再重试任务。",
+    "Default mode is compatible": "默认模式与当前处理方式兼容",
+    "Default mode does not match the selected processing method": "默认模式与当前处理方式不匹配",
+    "Current Blockers:": "当前阻塞项：",
+    "Current Blockers: none": "当前阻塞项：无",
+    "Next: Submit a smoke test or a real task.": "下一步：运行一次冒烟测试，或直接提交真实任务。",
+    "Check WORKSPACE_DIR and make sure the relay process can write to it.": "请检查 WORKSPACE_DIR，并确认 relay 进程拥有写入权限。",
+    "Make sure the runtime data directory exists and that no other process is locking relay.sqlite3.": "请确认 runtime 数据目录存在，且没有其他进程锁住 relay.sqlite3。",
+    "Enable WEB_UI_ENABLED if you want to manage relay from the browser.": "如果你希望通过浏览器管理 relay，请启用 WEB_UI_ENABLED。",
+    "Open Settings and switch to a mode supported by the selected processing method.": "请打开设置，切换到当前处理方式支持的模式。",
+}
+
+_PROBLEM_TITLE_MAP_ZH = {
+    "manual_verification_required": "需要手动验证",
+    "profile_revalidation_required": "需要重新验证",
+    "wechat_parameter_error": "链接参数异常",
+    "wechat_body_too_short": "文章正文过短",
+    "executor_session_locked": "处理方式正忙",
+    "executor_network_error": "网络或上游请求失败",
+    "executor_auth_error": "认证尚未准备好",
+    "executor_timeout": "处理已超时",
+    "executor_start_failed": "无法启动处理方式",
+    "executor_command_not_found": "未找到处理命令",
+    "executor_command_not_configured": "命令模板尚未配置",
+    "executor_nonzero_exit": "处理命令返回错误",
+    "executor_reported_failure": "处理方式返回了失败结果",
+}
+
+_STATUS_TITLE_MAP_ZH = {
+    "completed": "任务已完成",
+    "cancelled": "任务已中断",
+    "failed": "任务处理失败",
+    "cancelling": "正在中断任务",
+}
+
+_STAGE_LABEL_MAP_ZH = {
+    "queued": "已排队",
+    "preparing": "准备任务",
+    "running": "处理中",
+    "finalizing": "整理结果",
+    "cancelling": "正在中断",
+    "completed": "已完成",
+    "failed": "已失败",
+    "cancelled": "已中断",
+}
+
+_TIMELINE_LABEL_MAP_ZH = {
+    "queued": "已排队",
+    "preparing": "准备任务",
+    "running": "运行处理方式",
+    "finalizing": "整理结果",
+    "failed": "已失败",
+    "cancelled": "已中断",
+    "cancelling": "已请求中断",
+}
+
+_SUGGESTED_ACTIONS_ZH = {
+    "manual_verification_required": [
+        "请在受管浏览器中打开文章并完成验证步骤。",
+        "验证完成后，再重新提交任务。",
+    ],
+    "profile_revalidation_required": [
+        "请在受管浏览器 profile 中重新打开这篇文章。",
+        "重新完成验证或登录后，再重试任务。",
+    ],
+    "wechat_parameter_error": [
+        "请回到原始文章页面，重新分享原文链接。",
+        "重新提交时尽量避免使用已失效或被缩短的分享页。",
+    ],
+    "wechat_body_too_short": [
+        "请先在受管浏览器中打开文章，并确认正文已完整加载。",
+        "正文可见后，再重新重试任务。",
+    ],
+    "executor_session_locked": [
+        "请等待当前任务结束，让 relay 自动重试。",
+        "尽量避免同时对同一个目标发起多条任务。",
+    ],
+    "executor_network_error": [
+        "请检查本机当前的网络或代理设置。",
+        "网络恢复稳定后，再重试任务。",
+    ],
+    "executor_auth_error": [
+        "请检查本地工具的登录状态或 API Key 配置。",
+        "重试前，建议先打开诊断页或运行 relay doctor。",
+    ],
+    "executor_timeout": [
+        "可以先重试一次，确认这次超时是否只是临时问题。",
+        "只有在这类任务本来就会运行更久时，才建议调大超时时间。",
+    ],
+    "executor_start_failed": [
+        "请检查命令路径和本地工具安装是否正确。",
+        "可先运行 relay doctor 或打开 Web 诊断页确认环境。",
+    ],
+    "executor_command_not_found": [
+        "请到设置里填写正确的命令路径。",
+        "如果只是做冒烟测试，可以改用模拟处理方式或命令处理方式。",
+    ],
+    "executor_command_not_configured": [
+        "请到设置中补充一条可信的命令模板。",
+        "如果暂时不打算用自定义命令，可以切换到其他处理方式。",
+    ],
+    "executor_nonzero_exit": [
+        "请打开任务文件，检查 stdout.txt 和 stderr.txt。",
+        "修正底层命令错误后，再重试任务。",
+    ],
+    "executor_reported_failure": [
+        "请先查看结果摘要和任务文件，确认失败原因。",
+        "只有确认原因是临时问题或已经修正后，再重试任务。",
+    ],
+}
+
+_STATUS_ACTIONS_ZH = {
+    "completed": [
+        "如需完整输出，可打开任务详情或任务文件查看。",
+        "如果还要继续处理，可以按当前设置再次提交任务。",
+    ],
+    "cancelled": [
+        "如需确认任务停在了哪一步，可打开任务详情查看。",
+        "准备好之后，可以重新提交这条任务。",
+    ],
+    "queued": [
+        "请等待 relay 完成当前步骤；如果不再需要这条任务，也可以直接中断。",
+    ],
+    "preparing": [
+        "请等待 relay 完成当前步骤；如果不再需要这条任务，也可以直接中断。",
+    ],
+    "running": [
+        "请等待 relay 完成当前步骤；如果不再需要这条任务，也可以直接中断。",
+    ],
+    "finalizing": [
+        "请等待 relay 完成当前步骤；如果不再需要这条任务，也可以直接中断。",
+    ],
+    "cancelling": [
+        "请等待 relay 完成当前步骤；如果不再需要这条任务，也可以直接中断。",
+    ],
+    "failed": [
+        "请先打开任务文件或诊断摘要，查看更多细节。",
+        "确认原因后，再决定是否重试。",
+    ],
+}
 
 
 def format_duration_ms(duration_ms: int | None, lang: str = "en") -> str:
@@ -99,7 +335,7 @@ def status_tone(status: str) -> str:
 
 def source_label(source: str, lang: str = "en") -> str:
     if source == "wechat_article":
-        return "WeChat"
+        return "微信" if lang == "zh-CN" else "WeChat"
     if source == "xiaohongshu":
         return "小红书" if lang == "zh-CN" else "Xiaohongshu"
     return source.replace("_", " ").title()
@@ -125,7 +361,8 @@ def summarize_result(task: TaskRecord, *, status=None, lang: str = "en") -> str:
     first_action = next((item.strip() for item in actions if item and item.strip()), "")
     if problem_title and task.status in {"failed", "cancelled"}:
         if first_action:
-            return f"{problem_title} {'后续建议：' if lang == 'zh-CN' else 'Next:'} {first_action}"
+            prefix = "后续建议：" if lang == "zh-CN" else "Next:"
+            return f"{problem_title} {prefix} {first_action}"
         return problem_title
 
     advice = advice_for_error(task.error_code)
@@ -195,101 +432,19 @@ def localize_environment_summary(summary: str, *, lang: str = "en") -> str:
 def localize_problem_title(status: str, error_code: str, raw_title: str, *, lang: str = "en") -> str:
     if lang != "zh-CN":
         return (raw_title or "").strip()
-    mapped = {
-        "manual_verification_required": "需要手动验证",
-        "profile_revalidation_required": "需要重新验证",
-        "wechat_parameter_error": "链接参数异常",
-        "wechat_body_too_short": "文章正文过短",
-        "executor_session_locked": "处理方式正忙",
-        "executor_network_error": "网络或上游请求失败",
-        "executor_auth_error": "认证尚未准备好",
-        "executor_timeout": "处理已超时",
-        "executor_start_failed": "无法启动处理方式",
-        "executor_command_not_found": "未找到处理命令",
-        "executor_command_not_configured": "命令模板尚未配置",
-        "executor_nonzero_exit": "处理命令返回错误",
-        "executor_reported_failure": "处理方式返回了失败结果",
-    }.get((error_code or "").strip())
+    mapped = _PROBLEM_TITLE_MAP_ZH.get((error_code or "").strip())
     if mapped:
         return mapped
-    status_map = {
-        "completed": "任务已完成",
-        "cancelled": "任务已中断",
-        "failed": "任务处理失败",
-        "cancelling": "正在中断任务",
-    }
-    return status_map.get((status or "").strip(), "") or localize_dynamic_text(raw_title, lang=lang)
+    return _STATUS_TITLE_MAP_ZH.get((status or "").strip(), "") or localize_dynamic_text(raw_title, lang=lang)
 
 
 def localize_suggested_actions(status: str, error_code: str, actions: list[str], *, lang: str = "en") -> list[str]:
     if lang != "zh-CN":
         return [item for item in actions if item]
-    mapped = {
-        "manual_verification_required": [
-            "请在受管浏览器中打开文章并完成验证。",
-            "验证完成后，再重新提交任务。",
-        ],
-        "profile_revalidation_required": [
-            "请在受管浏览器 profile 中重新打开这篇文章。",
-            "重新完成验证或登录后，再重试任务。",
-        ],
-        "wechat_parameter_error": [
-            "请回到原始文章页面，重新分享原始链接。",
-            "重新提交时尽量避免使用已失效或被缩短的分享页。",
-        ],
-        "wechat_body_too_short": [
-            "请先在受管浏览器中打开文章，并确认正文已完整加载。",
-            "正文可见后，再重新重试任务。",
-        ],
-        "executor_session_locked": [
-            "请等待当前任务结束，让转发服务自动重试。",
-            "尽量避免同时对同一个目标发起多条任务。",
-        ],
-        "executor_network_error": [
-            "请检查本机当前的网络或代理设置。",
-            "网络恢复稳定后，再重试任务。",
-        ],
-        "executor_auth_error": [
-            "请检查本地工具的登录状态或 API Key 配置。",
-            "先运行一次诊断，再重新重试。",
-        ],
-        "executor_timeout": [
-            "可以先重试一次，确认这次超时是否只是临时问题。",
-            "只有在这类任务本来就会运行更久时，才建议调大超时时间。",
-        ],
-        "executor_start_failed": [
-            "请检查命令路径和本地工具安装是否正确。",
-            "可先打开诊断页或运行 relay doctor 确认环境。",
-        ],
-        "executor_command_not_found": [
-            "请到设置里填写正确的命令路径。",
-            "如果只是做冒烟测试，可以改用模拟处理方式或命令处理方式。",
-        ],
-        "executor_command_not_configured": [
-            "请到设置中补充一条可信的命令模板。",
-            "如果暂时不打算用自定义命令，可以切换到其他处理方式。",
-        ],
-        "executor_nonzero_exit": [
-            "请打开任务文件，检查 stdout.txt 和 stderr.txt。",
-            "修正底层命令错误后，再重试任务。",
-        ],
-        "executor_reported_failure": [
-            "请先查看结果摘要和任务文件，确认失败原因。",
-            "只有确认原因是临时问题或已经修正后，再重试任务。",
-        ],
-    }.get((error_code or "").strip())
+    mapped = _SUGGESTED_ACTIONS_ZH.get((error_code or "").strip())
     if mapped:
         return mapped
-    status_map = {
-        "completed": ["如果你需要完整输出，可以查看结果摘要或任务文件。", "如果还要继续处理，可以按当前设置再次提交任务。"],
-        "cancelled": ["如果你想确认任务停在了哪一步，可以打开任务详情查看。", "准备好之后，可以重新提交这条任务。"],
-        "queued": ["请等待当前步骤完成；如果不再需要这条任务，也可以直接中断。"],
-        "preparing": ["请等待当前步骤完成；如果不再需要这条任务，也可以直接中断。"],
-        "running": ["请等待当前步骤完成；如果不再需要这条任务，也可以直接中断。"],
-        "finalizing": ["请等待当前步骤完成；如果不再需要这条任务，也可以直接中断。"],
-        "cancelling": ["请等待当前步骤完成；如果不再需要这条任务，也可以直接中断。"],
-        "failed": ["请先打开任务文件或诊断摘要，查看更详细的原因。", "确认可能原因后，再决定是否重试。"],
-    }.get((status or "").strip())
+    status_map = _STATUS_ACTIONS_ZH.get((status or "").strip())
     if status_map:
         return status_map
     return [localize_dynamic_text(item, lang=lang) for item in actions if item]
@@ -298,34 +453,13 @@ def localize_suggested_actions(status: str, error_code: str, actions: list[str],
 def localize_stage_label(status: str, raw_label: str, *, lang: str = "en") -> str:
     if lang != "zh-CN":
         return raw_label
-    mapped = {
-        "queued": "已排队",
-        "preparing": "准备任务",
-        "running": "处理中",
-        "finalizing": "整理结果",
-        "cancelling": "正在中断",
-        "completed": "已完成",
-        "failed": "已失败",
-        "cancelled": "已中断",
-    }.get((status or "").strip())
-    return mapped or localize_dynamic_text(raw_label, lang=lang)
+    return _STAGE_LABEL_MAP_ZH.get((status or "").strip()) or localize_dynamic_text(raw_label, lang=lang)
 
 
 def localize_timeline_label(step_id: str, raw_label: str, *, lang: str = "en") -> str:
     if lang != "zh-CN":
         return raw_label
-    mapped = {
-        "queued": "已排队",
-        "preparing": "准备任务",
-        "running": "运行处理方式",
-        "finalizing": "整理结果",
-        "failed": "已失败",
-        "cancelled": "已中断",
-        "cancelling": "已请求中断",
-    }.get((step_id or "").strip())
-    if mapped:
-        return mapped
-    return localize_dynamic_text(raw_label, lang=lang)
+    return _TIMELINE_LABEL_MAP_ZH.get((step_id or "").strip()) or localize_dynamic_text(raw_label, lang=lang)
 
 
 def build_localized_diagnostic_summary(task, *, lang: str = "en") -> str:
@@ -365,144 +499,42 @@ def localize_dynamic_text(text: str, *, lang: str = "en") -> str:
     translated = _translate_result_summary_line(text)
     if translated != text:
         return translated
-    if text == "Remote or private-network access is not ready":
-        return "异网或私网访问尚未准备好"
-    if text == "Remote or private-network access still needs protection":
-        return "异网或私网访问仍缺少保护"
-    if text == "Remote or private-network access looks ready":
-        return "异网或私网访问看起来已经就绪"
     if text.startswith("Relay is listening on ") and text.endswith(". Another device cannot reach this bind address yet."):
         bind = text.removeprefix("Relay is listening on ").removesuffix(". Another device cannot reach this bind address yet.")
-        return f"relay 当前监听在 {bind}，其他设备暂时还无法访问这个地址。"
+        return f"relay 当前监听在 {bind}，但其他设备暂时还无法访问这个地址。"
     if text.startswith("Relay is reachable on ") and text.endswith(", but AUTH_TOKEN is still empty."):
         bind = text.removeprefix("Relay is reachable on ").removesuffix(", but AUTH_TOKEN is still empty.")
         return f"relay 已经可以通过 {bind} 被访问，但 AUTH_TOKEN 仍然为空。"
     if text.startswith("Relay is reachable on ") and text.endswith(" and auth token protection is enabled."):
         bind = text.removeprefix("Relay is reachable on ").removesuffix(" and auth token protection is enabled.")
         return f"relay 已经可以通过 {bind} 被访问，并且认证 token 保护已启用。"
-    if text == "Set HOST=0.0.0.0 or another reachable interface before using a phone or private-network client.":
-        return "在手机或私网客户端接入前，请先把 HOST 设成 0.0.0.0 或其他可访问的接口地址。"
-    if text == "Keep AUTH_TOKEN enabled before exposing relay beyond the local machine.":
-        return "在 relay 暴露到本机以外之前，请保持 AUTH_TOKEN 已启用。"
-    if text == "Set AUTH_TOKEN before using relay from another device, a Tailscale network, or a public URL.":
-        return "在其他设备、Tailscale 网络或公网地址访问 relay 前，请先配置 AUTH_TOKEN。"
-    if text == "Retest the Android connection after saving the token and updating the app settings.":
-        return "保存 token 并更新 Android 设置后，再重新测试一次连接。"
     if text.startswith("Relay Bind: "):
         return f"Relay 绑定地址：{text.removeprefix('Relay Bind: ')}"
     if text.startswith("Remote Access: "):
         state = text.removeprefix("Remote Access: ")
-        return f"异网访问：{'已就绪' if state == 'ready' else '仍需配置' if state == 'needs setup' else state}"
-    return {
-        "ok": "正常",
-        "warning": "警告",
-        "blocked": "阻塞",
-        "Relay is ready.": "转发服务已就绪。",
-        "Relay is running with setup warnings.": "转发服务正在运行，但仍有配置提醒。",
-        "Relay is blocked by an environment issue.": "转发服务被环境问题阻塞。",
-        "Runtime": "运行环境",
-        "Configuration": "配置",
-        "Processing Method": "处理方式",
-        "Runtime directory is ready": "运行目录已就绪",
-        "Runtime directory is not writable": "运行目录不可写",
-        "Database is ready": "数据库已就绪",
-        "Database is not ready": "数据库尚未就绪",
-        "Web UI is enabled": "Web 界面已启用",
-        "Web UI is disabled": "Web 界面已禁用",
-        "Processing method looks ready": "处理方式已基本就绪",
-        "Selected processing method needs setup": "当前处理方式仍需配置",
-        "Processing command was not found": "未找到处理命令",
-        "Command template is missing": "命令模板尚未配置",
-        "Processing could not start": "无法启动处理方式",
-        "Processing timed out": "处理已超时",
-        "Processing method is busy": "处理方式正忙",
-        "Network or provider request failed": "网络或上游请求失败",
-        "Authentication is not ready": "认证尚未准备好",
-        "Processing command exited with an error": "处理命令返回错误",
-        "Processing method reported a failure": "处理方式返回了失败结果",
-        "Manual verification required": "需要手动验证",
-        "Managed browser needs verification again": "需要重新验证受管浏览器",
-        "WeChat link is no longer valid": "微信链接已失效",
-        "Article body was too short": "文章正文过短",
-        "WeChat returned a verification step instead of the article body.": "微信返回的是验证步骤，而不是文章正文。",
-        "The saved WeChat verification or login state appears to have expired.": "之前保存的微信验证或登录状态似乎已经失效。",
-        "WeChat returned a parameter error page instead of the original article.": "微信返回了参数错误页，而不是原始文章。",
-        "The fetched page text did not look like a full WeChat article body.": "抓取到的页面文本不像一篇完整的微信文章正文。",
-        "The current OpenClaw lane is already being used by another task.": "当前 OpenClaw 通道已被其他任务占用。",
-        "The processing method could not reach its upstream service.": "处理方式无法连接到上游服务。",
-        "The selected processing method is missing valid authentication.": "当前处理方式缺少有效认证。",
-        "The task ran longer than the configured timeout window.": "任务运行时间超过了当前超时设置。",
-        "Relay could not launch the selected processing method.": "relay 无法启动当前处理方式。",
-        "Relay could not resolve the configured command on this machine.": "relay 无法在当前机器上解析已配置的命令。",
-        "The shell-command processing method does not have a command template yet.": "命令处理方式尚未配置命令模板。",
-        "The selected processing method started, but returned a failure code.": "处理方式已经启动，但返回了失败退出码。",
-        "The task finished, but the processing method reported a failed result.": "任务已结束，但处理方式返回了失败结果。",
-        "Open the article in the managed browser and finish the verification step.": "请在受管浏览器中打开文章并完成验证步骤。",
-        "Submit the task again after verification succeeds.": "验证完成后，再重新提交任务。",
-        "Open the article again in the managed browser profile.": "请在受管浏览器 profile 中重新打开这篇文章。",
-        "Complete verification or sign in again, then retry the task.": "重新完成验证或登录后，再重试任务。",
-        "Go back to the original article and share the article link again.": "请回到原始文章页面，重新分享文章链接。",
-        "Avoid shortened or expired share pages when resubmitting.": "重新提交时尽量避免使用已失效或被缩短的分享页。",
-        "Open the article once in the managed browser and make sure it loads fully.": "请先在受管浏览器中打开文章，并确认正文已完整加载。",
-        "Retry the task after the article body is visible.": "正文可见后，再重新重试任务。",
-        "Wait for the current run to finish and let the relay retry automatically.": "请等待当前任务结束，让 relay 自动重试。",
-        "Avoid starting multiple tasks against the same OpenClaw target at the same time.": "尽量避免同时对同一个 OpenClaw 目标发起多条任务。",
-        "Check the current network or proxy settings on this machine.": "请检查本机当前的网络或代理设置。",
-        "Retry the task after the network path is stable again.": "网络恢复稳定后，再重试任务。",
-        "Check the local tool login or API key configuration.": "请检查本地工具的登录状态或 API Key 配置。",
-        "Run the diagnostics view or relay doctor before retrying.": "重试前，建议先打开诊断页或运行 relay doctor。",
-        "Retry the task once to confirm whether the timeout was temporary.": "可以先重试一次，确认这次超时是否只是临时问题。",
-        "Increase the timeout only if this task type is expected to run longer.": "只有在这类任务本来就会运行更久时，才建议调大超时时间。",
-        "Check the configured command path and local tool installation.": "请检查命令路径和本地工具安装是否正确。",
-        "Use relay doctor or Web UI Diagnostics to confirm the environment.": "可先运行 relay doctor 或打开 Web 诊断页确认环境。",
-        "Set the correct command path in Settings.": "请到设置里填写正确的命令路径。",
-        "Switch to the mock or shell-command processing method if you only need a smoke test.": "如果只是做冒烟测试，可以改用模拟处理方式或命令处理方式。",
-        "Open Settings and add a trusted command template.": "请到设置中补充一条可信的命令模板。",
-        "Switch to another processing method if you do not plan to use a custom command.": "如果暂时不打算用自定义命令，可以切换到其他处理方式。",
-        "Open the task files and inspect stdout.txt and stderr.txt.": "请打开任务文件，检查 stdout.txt 和 stderr.txt。",
-        "Fix the underlying command error, then retry the task.": "修正底层命令错误后，再重试任务。",
-        "Review the result summary and task files for the reported reason.": "请先查看结果摘要和任务文件，确认失败原因。",
-        "Retry only after confirming the cause is temporary or corrected.": "只有确认原因是临时问题或已经修正后，再重试任务。",
-        "Default mode is compatible": "默认模式匹配当前处理方式",
-        "Default mode does not match the selected processing method": "默认模式与当前处理方式不匹配",
-        "Current Blockers:": "当前阻塞项：",
-        "Current Blockers: none": "当前阻塞项：无",
-        "Next: Submit a smoke test or a real task.": "下一步：运行一次冒烟测试，或直接提交真实任务。",
-        "Check WORKSPACE_DIR and make sure the relay process can write to it.": "请检查 WORKSPACE_DIR，并确认 relay 进程拥有写入权限。",
-        "Make sure the runtime data directory exists and that no other process is locking relay.sqlite3.": "请确认 runtime 数据目录存在，且没有其他进程锁住 relay.sqlite3。",
-        "Enable WEB_UI_ENABLED if you want to manage relay from the browser.": "如果你希望通过浏览器管理 relay，请启用 WEB_UI_ENABLED。",
-        "Open Settings and switch to a mode supported by the selected processing method.": "请打开设置，切换到当前处理方式支持的模式。",
-    }.get(text, text)
+        mapped_state = {"ready": "已经就绪", "needs setup": "仍需配置"}.get(state, state)
+        return f"异网访问：{mapped_state}"
+    return _DYNAMIC_TEXT_MAP_ZH.get(text, text)
 
 
 def _translate_result_summary_line(text: str) -> str:
-    if text == "Highlights:":
-        return "要点："
-    if text == "Link processed successfully.":
-        return "链接已处理完成。"
-    if text == "No explicitly mentioned papers found.":
-        return "未发现文中明确提到的论文。"
-    if text == "No clearly related papers found.":
-        return "未发现明显相关的论文。"
-    if text.startswith("Found ") and text.endswith(" explicitly mentioned paper."):
-        count = text.removeprefix("Found ").removesuffix(" explicitly mentioned paper.")
-        return f"发现 {count} 篇文中明确提到的论文。"
-    if text.startswith("Found ") and text.endswith(" explicitly mentioned papers."):
-        count = text.removeprefix("Found ").removesuffix(" explicitly mentioned papers.")
-        return f"发现 {count} 篇文中明确提到的论文。"
-    if text.startswith("No explicit papers found. ") and text.endswith(" possible papers detected."):
-        count = text.removeprefix("No explicit papers found. ").removesuffix(" possible papers detected.")
-        return f"未发现文中明确提到的论文，但识别到 {count} 篇可能相关的论文。"
-    if text.startswith("- Topic: "):
-        return f"- 主题：{text.removeprefix('- Topic: ')}"
-    if text.startswith("- Takeaway: "):
-        return f"- 结论：{text.removeprefix('- Takeaway: ')}"
-    if text.startswith("- Note: "):
-        return f"- 说明：{text.removeprefix('- Note: ')}"
-    if text.startswith("- Paper: "):
-        return f"- 论文：{text.removeprefix('- Paper: ')}"
-    if text.startswith("- Possible: "):
-        return f"- 可能相关：{text.removeprefix('- Possible: ')}"
+    if text in _RESULT_SUMMARY_LINE_MAP_ZH:
+        return _RESULT_SUMMARY_LINE_MAP_ZH[text]
+    explicit_match = re.fullmatch(r"Found (\d+) explicitly mentioned papers?\.", text)
+    if explicit_match:
+        return f"发现 {explicit_match.group(1)} 篇文中明确提到的论文。"
+    possible_match = re.fullmatch(r"No explicit papers found\. (\d+) possible papers detected\.", text)
+    if possible_match:
+        return f"未发现文中明确提到的论文，但识别到 {possible_match.group(1)} 篇可能相关的论文。"
+    for prefix, translated in (
+        ("- Topic: ", "- 主题："),
+        ("- Takeaway: ", "- 结论："),
+        ("- Note: ", "- 说明："),
+        ("- Paper: ", "- 论文："),
+        ("- Possible: ", "- 可能相关："),
+    ):
+        if text.startswith(prefix):
+            return translated + text.removeprefix(prefix)
     return text
 
 
@@ -521,6 +553,10 @@ def _localize_diagnostic_item(item: dict[str, object], *, lang: str = "en") -> d
     }
 
 
+def _is_in_networks(value: ipaddress.IPv4Address, networks: tuple[ipaddress.IPv4Network, ...]) -> bool:
+    return any(value in network for network in networks)
+
+
 def _classify_ipv4_address(address: str) -> str:
     try:
         value = ipaddress.ip_address(address)
@@ -530,14 +566,25 @@ def _classify_ipv4_address(address: str) -> str:
         return "other"
     if value.is_loopback:
         return "loopback"
-    if value in ipaddress.ip_network("100.64.0.0/10"):
+    if _is_in_networks(value, _PRIVATE_OVERLAY_NETWORKS):
         return "private_network"
-    if value.is_private:
+    if _is_in_networks(value, _RFC1918_LAN_NETWORKS):
         return "lan"
     return "other"
 
 
-def _detect_host_ipv4_addresses() -> list[str]:
+def _sort_address_key(address: str) -> tuple[int, tuple[int, int, int, int]]:
+    try:
+        value = ipaddress.ip_address(address)
+    except ValueError:
+        return (99, (255, 255, 255, 255))
+    octets = tuple(int(part) for part in str(value).split("."))
+    kind = _classify_ipv4_address(address)
+    priority = {"private_network": 0, "lan": 1, "loopback": 2, "other": 3}.get(kind, 3)
+    return (priority, octets)
+
+
+def _detect_host_ipv4_addresses_uncached() -> list[str]:
     candidates: set[str] = set()
     names = {
         socket.gethostname(),
@@ -560,10 +607,20 @@ def _detect_host_ipv4_addresses() -> list[str]:
     except OSError:
         pass
     candidates.update(_detect_tailscale_ipv4_addresses())
-    return sorted(candidates)
+    return sorted(candidates, key=_sort_address_key)
 
 
-def _detect_tailscale_ipv4_addresses() -> list[str]:
+def _detect_host_ipv4_addresses() -> list[str]:
+    global _DETECTED_ADDRESS_CACHE
+    now = time.monotonic()
+    if _DETECTED_ADDRESS_CACHE and now - _DETECTED_ADDRESS_CACHE[0] < _ADDRESS_CACHE_TTL_SECONDS:
+        return list(_DETECTED_ADDRESS_CACHE[1])
+    detected = _detect_host_ipv4_addresses_uncached()
+    _DETECTED_ADDRESS_CACHE = (now, detected)
+    return list(detected)
+
+
+def _detect_tailscale_ipv4_addresses_uncached() -> list[str]:
     candidates: set[str] = set()
     command_candidates: list[list[str]] = []
     tailscale_path = shutil.which("tailscale") or shutil.which("tailscale.exe")
@@ -590,7 +647,17 @@ def _detect_tailscale_ipv4_addresses() -> list[str]:
             address = line.strip()
             if _classify_ipv4_address(address) == "private_network":
                 candidates.add(address)
-    return sorted(candidates)
+    return sorted(candidates, key=_sort_address_key)
+
+
+def _detect_tailscale_ipv4_addresses() -> list[str]:
+    global _TAILSCALE_ADDRESS_CACHE
+    now = time.monotonic()
+    if _TAILSCALE_ADDRESS_CACHE and now - _TAILSCALE_ADDRESS_CACHE[0] < _ADDRESS_CACHE_TTL_SECONDS:
+        return list(_TAILSCALE_ADDRESS_CACHE[1])
+    detected = _detect_tailscale_ipv4_addresses_uncached()
+    _TAILSCALE_ADDRESS_CACHE = (now, detected)
+    return list(detected)
 
 
 def _format_urls(addresses: Iterable[str], port: int) -> list[str]:
@@ -598,6 +665,12 @@ def _format_urls(addresses: Iterable[str], port: int) -> list[str]:
 
 
 def build_connection_hints(host: str, port: int, public_url: str = "") -> dict[str, object]:
+    cache_key = (host, port, public_url.strip())
+    now = time.monotonic()
+    cached = _CONNECTION_HINTS_CACHE.get(cache_key)
+    if cached and now - cached[0] < _CONNECTION_HINTS_CACHE_TTL_SECONDS:
+        return dict(cached[1])
+
     detected_addresses = _detect_host_ipv4_addresses()
     lan_addresses = [address for address in detected_addresses if _classify_ipv4_address(address) == "lan"]
     private_addresses = [address for address in detected_addresses if _classify_ipv4_address(address) == "private_network"]
@@ -607,13 +680,16 @@ def build_connection_hints(host: str, port: int, public_url: str = "") -> dict[s
             lan_addresses.insert(0, host)
         elif host_type == "private_network" and host not in private_addresses:
             private_addresses.insert(0, host)
+
+    lan_addresses = sorted(dict.fromkeys(lan_addresses), key=_sort_address_key)
+    private_addresses = sorted(dict.fromkeys(private_addresses), key=_sort_address_key)
     bind_urls = _format_urls(private_addresses + lan_addresses, port)
     if host in {"127.0.0.1", "localhost", "::1"}:
         bind_urls = [f"http://127.0.0.1:{port}"]
     elif host not in {"0.0.0.0", "::"} and host not in {"127.0.0.1", "localhost", "::1"}:
         bind_urls = [f"http://{host}:{port}"] + [url for url in bind_urls if url != f"http://{host}:{port}"]
     bind_copy = bind_urls[0] if bind_urls else f"http://127.0.0.1:{port}"
-    return {
+    hints = {
         "local": f"http://127.0.0.1:{port}",
         "android_emulator": f"http://10.0.2.2:{port}",
         "bind": f"{host}:{port}",
@@ -624,6 +700,8 @@ def build_connection_hints(host: str, port: int, public_url: str = "") -> dict[s
         "private": _format_urls(private_addresses, port),
         "public": public_url.strip(),
     }
+    _CONNECTION_HINTS_CACHE[cache_key] = (now, hints)
+    return dict(hints)
 
 
 def collect_task_artifacts(task_dir: str) -> list[dict[str, str]]:

@@ -60,9 +60,17 @@
     </div>
     <div class="quick-card">
       <span>{{ t('quick.current_bind') }}</span>
-      <strong>{{ connection_hints.bind }}</strong>
+      <strong>{{ connection_hints.bind_display }}</strong>
       <p>{{ t('quick.current_bind_body') }}</p>
-      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.bind }}">{{ t('quick.copy_bind') }}</button>
+      <p class="task-meta">{{ connection_hints.bind }}</p>
+      {% if connection_hints.bind_urls %}
+      <ul class="meta-list">
+        {% for url in connection_hints.bind_urls %}
+        <li>{{ url }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.bind_copy }}">{{ t('quick.copy_bind') }}</button>
     </div>
     <div class="quick-card">
       <span>{{ t('quick.diagnostics') }}</span>
@@ -95,9 +103,17 @@
     </div>
     <div class="quick-card">
       <span>{{ t('connection.bind') }}</span>
-      <strong>{{ connection_hints.bind }}</strong>
+      <strong>{{ connection_hints.bind_display }}</strong>
       <p>{{ t('connection.bind_body') }}</p>
-      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.bind }}">{{ t('connection.copy_bind') }}</button>
+      <p class="task-meta">{{ connection_hints.bind }}</p>
+      {% if connection_hints.bind_urls %}
+      <ul class="meta-list">
+        {% for url in connection_hints.bind_urls %}
+        <li>{{ url }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <button type="button" class="secondary copy-button" data-copy-text="{{ connection_hints.bind_copy }}">{{ t('connection.copy_bind') }}</button>
     </div>
     <div class="quick-card">
       <span>{{ t('connection.lan') }}</span>

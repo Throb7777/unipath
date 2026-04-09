@@ -88,10 +88,10 @@ class MainActivity : AppCompatActivity() {
         binding.relayLabelText.text = getString(R.string.main_relay_label)
         binding.modeLabelText.text = getString(R.string.main_mode_label)
         binding.recentLabelText.text = getString(R.string.main_recent_label)
-        binding.recentHintText.text = getString(R.string.main_recent_hint)
+        binding.recentHintText.text = buildRecentHint()
         binding.clearTasksButton.text = getString(R.string.action_clear)
         binding.recentEmptyText.text = getString(R.string.main_no_tasks_hint)
-        binding.switchRelayButton.text = getString(R.string.action_manage)
+        binding.switchRelayButton.text = getString(R.string.action_services)
         binding.switchModeButton.text = getString(R.string.action_choose)
     }
 
@@ -180,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             .orEmpty()
 
     private fun renderRecentTasks() {
-        val records = taskStore.listRecent(TaskStore.MAX_RECORDS)
+        val records = taskStore.listRecent(recentTaskDisplayLimit())
         val renderKey = records.joinToString("||") {
             listOf(
                 it.sequenceNumber.toString(),
@@ -202,6 +202,7 @@ class MainActivity : AppCompatActivity() {
         binding.recentTasksContainer.removeAllViews()
 
         val hasTasks = records.isNotEmpty()
+        binding.recentHintText.text = buildRecentHint()
         binding.recentEmptyText.visibility = if (hasTasks) View.GONE else View.VISIBLE
         binding.clearTasksButton.visibility = if (hasTasks) View.VISIBLE else View.GONE
 
@@ -387,7 +388,7 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun syncUnfinishedTasks() {
         val now = System.currentTimeMillis()
-        val records = taskStore.listRecent(TaskStore.MAX_RECORDS)
+        val records = taskStore.listRecent(recentTaskSyncWindowLimit())
         var changed = false
         records
             .filter { shouldSyncRecord(it) }
@@ -431,7 +432,7 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun computeRecentSyncDelayMs(): Long {
-        val activeStatuses = taskStore.listRecent(TaskStore.MAX_RECORDS)
+        val activeStatuses = taskStore.listRecent(recentTaskSyncWindowLimit())
             .filter { shouldSyncRecord(it) }
             .take(RECENT_SYNC_ACTIVE_LIMIT)
             .mapNotNull { it.relayStatusSnapshot }
@@ -559,13 +560,7 @@ class MainActivity : AppCompatActivity() {
         }
         var selectedIndex = modes.indexOfFirst { it.id == settingsStore.selectedModeId() }.coerceAtLeast(0)
         val items = modes.map { mode ->
-            buildString {
-                append(UiText.processingModeLabel(this@MainActivity, mode.id, mode.label))
-                if (mode.description.isNotBlank()) {
-                    append('\n')
-                    append(mode.description)
-                }
-            }
+            UiText.processingModeLabel(this@MainActivity, mode.id, mode.label)
         }.toTypedArray()
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.main_mode_picker_title))
@@ -589,6 +584,26 @@ class MainActivity : AppCompatActivity() {
         com.peter.paperharvestshare.BuildConfig.DEBUG ||
             settingsStore.currentConnectionType() == ConnectionType.EMULATOR ||
             isProbablyEmulator()
+
+    private fun recentTaskDisplayLimit(): Int =
+        settingsStore.currentRecentTaskLimit()
+
+    private fun recentTaskSyncWindowLimit(): Int {
+        val displayLimit = recentTaskDisplayLimit()
+        return when {
+            displayLimit <= 0 -> 50
+            else -> max(displayLimit, 20)
+        }
+    }
+
+    private fun buildRecentHint(): String {
+        val limit = recentTaskDisplayLimit()
+        return if (limit <= 0) {
+            getString(R.string.main_recent_hint_all)
+        } else {
+            getString(R.string.main_recent_hint_limited, limit)
+        }
+    }
 
     private fun isProbablyEmulator(): Boolean =
         Build.FINGERPRINT.contains("generic", ignoreCase = true) ||

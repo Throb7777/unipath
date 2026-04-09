@@ -40,7 +40,7 @@ class TaskStore(context: Context) {
 
         val trimmed = current
             .sortedWith(compareByDescending<SubmissionRecord> { it.sequenceNumber }.thenByDescending { it.createdAtEpochMs })
-            .take(MAX_RECORDS)
+            .take(MAX_STORED_RECORDS)
 
         val serialized = JSONArray(trimmed.map(::toJson)).toString()
         if (serialized == cachedRaw) {
@@ -58,10 +58,11 @@ class TaskStore(context: Context) {
         loadAllInternal().firstOrNull { it.workId == workId }
 
     @Synchronized
-    fun listRecent(limit: Int = MAX_RECORDS): List<SubmissionRecord> =
-        loadAllInternal()
+    fun listRecent(limit: Int = DEFAULT_DISPLAY_LIMIT): List<SubmissionRecord> {
+        val sorted = loadAllInternal()
             .sortedWith(compareByDescending<SubmissionRecord> { it.sequenceNumber }.thenByDescending { it.createdAtEpochMs })
-            .take(limit)
+        return if (limit <= 0) sorted else sorted.take(limit)
+    }
 
     @Synchronized
     fun clear() {
@@ -161,7 +162,8 @@ class TaskStore(context: Context) {
     }
 
     companion object {
-        const val MAX_RECORDS = 20
+        const val MAX_STORED_RECORDS = 200
+        const val DEFAULT_DISPLAY_LIMIT = 20
         private const val MESSAGE_LIMIT = 600
         private const val TIMELINE_LIMIT = 1800
         private const val DIAGNOSTIC_LIMIT = 1600

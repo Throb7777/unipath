@@ -12,6 +12,7 @@ from dataclasses import replace
 from app.config import BootstrapSettings, OpenClawRuntimeConfig, RuntimeConfig, ShellCommandRuntimeConfig
 from app.http_app import create_app
 from app.models import ShareSubmissionRequest
+from app.web.view_models import build_connection_hints
 
 
 def make_bootstrap(root: Path) -> BootstrapSettings:
@@ -100,7 +101,13 @@ class WebUiTests(unittest.TestCase):
                 return_value={
                     "local": "http://127.0.0.1:18080",
                     "android_emulator": "http://10.0.2.2:18080",
-                    "bind": "http://<your-computer-ip>:18080",
+                    "bind": "0.0.0.0:18080",
+                    "bind_display": "http://100.101.102.103:18080",
+                    "bind_urls": [
+                        "http://100.101.102.103:18080",
+                        "http://192.168.1.23:18080",
+                    ],
+                    "bind_copy": "http://100.101.102.103:18080",
                     "lan": ["http://192.168.1.23:18080"],
                     "private": ["http://100.101.102.103:18080"],
                     "public": "https://relay.example.com",
@@ -114,6 +121,7 @@ class WebUiTests(unittest.TestCase):
             self.assertIn("Private network", index.text)
             self.assertIn("http://100.101.102.103:18080", index.text)
             self.assertIn("https://relay.example.com", index.text)
+            self.assertIn("0.0.0.0:18080", index.text)
 
             save = client.post(
                 "/ui/settings",
@@ -147,6 +155,16 @@ class WebUiTests(unittest.TestCase):
             app_runtime = client.app.state.runtime
             self.assertEqual(app_runtime.runtime_config.executor_kind, "shell_command")
             self.assertEqual(app_runtime.runtime_config.default_mode, "link_only_v1")
+
+    def test_build_connection_hints_uses_tailscale_and_bind_copy(self) -> None:
+        with patch("app.web.view_models._detect_host_ipv4_addresses", return_value=["192.168.1.23", "100.101.102.103"]):
+            hints = build_connection_hints("0.0.0.0", 18080, "")
+
+        self.assertEqual(hints["bind"], "0.0.0.0:18080")
+        self.assertEqual(hints["bind_display"], "http://100.101.102.103:18080")
+        self.assertEqual(hints["bind_copy"], "http://100.101.102.103:18080")
+        self.assertIn("http://100.101.102.103:18080", hints["private"])
+        self.assertIn("http://192.168.1.23:18080", hints["lan"])
 
     def test_web_ui_settings_test_executor_action(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:

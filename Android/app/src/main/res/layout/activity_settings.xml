@@ -160,6 +160,38 @@
                     tools:text="Use the relay base URL only." />
 
                 <TextView
+                    android:id="@+id/serviceProfileNameLabelText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/text_primary"
+                    tools:text="Saved Service Name" />
+
+                <EditText
+                    android:id="@+id/serviceProfileNameInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_panel"
+                    android:hint="Home Relay"
+                    android:inputType="textCapWords"
+                    android:minHeight="56dp"
+                    android:padding="18dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    tools:text="Home Relay" />
+
+                <TextView
+                    android:id="@+id/currentSavedProfileText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Saved on this phone as Home Relay." />
+
+                <TextView
                     android:id="@+id/serviceAuthLabelText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -284,10 +316,20 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_panel"
                     android:orientation="vertical"
-                    android:padding="12dp"
                     android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/modeDescriptionText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_panel"
+                    android:padding="16dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/text_secondary"
+                    android:visibility="gone"
+                    tools:text="Selected mode description appears here." />
             </LinearLayout>
 
             <LinearLayout
@@ -355,6 +397,36 @@
                         android:layout_marginTop="8dp"
                         android:text="@string/language_simplified_chinese" />
                 </RadioGroup>
+
+                <TextView
+                    android:id="@+id/recentTasksLimitLabelText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/text_primary"
+                    tools:text="Recent Tasks" />
+
+                <TextView
+                    android:id="@+id/recentTasksLimitHintText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Choose how many recent tasks the home screen should show." />
+
+                <Button
+                    android:id="@+id/recentTasksLimitButton"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:textAllCaps="false"
+                    android:textColor="@color/link_blue"
+                    tools:text="Show 20 tasks" />
             </LinearLayout>
 
             <LinearLayout

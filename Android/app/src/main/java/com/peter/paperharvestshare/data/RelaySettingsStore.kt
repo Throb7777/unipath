@@ -68,6 +68,16 @@ class RelaySettingsStore(context: Context) {
     fun selectedModeSummary(): String =
         selectedModeDescription()?.let { "${selectedModeLabel()}\n$it" } ?: selectedModeLabel()
 
+    fun currentRecentTaskLimit(): Int =
+        prefs.getInt(KEY_RECENT_TASK_LIMIT, DEFAULT_RECENT_TASK_LIMIT)
+            .takeIf { it in RECENT_TASK_LIMIT_OPTIONS }
+            ?: DEFAULT_RECENT_TASK_LIMIT
+
+    fun saveRecentTaskLimit(limit: Int) {
+        val normalized = if (limit in RECENT_TASK_LIMIT_OPTIONS) limit else DEFAULT_RECENT_TASK_LIMIT
+        prefs.edit().putInt(KEY_RECENT_TASK_LIMIT, normalized).apply()
+    }
+
     fun savedProfiles(): List<RelayServiceProfile> {
         val stored = loadSavedProfiles()
         return if (stored.isNotEmpty()) {
@@ -79,6 +89,11 @@ class RelaySettingsStore(context: Context) {
 
     fun currentProfileId(): String? =
         prefs.getString(KEY_CURRENT_PROFILE_ID, null)?.ifBlank { null }
+
+    fun currentProfile(): RelayServiceProfile? {
+        val currentId = currentProfileId()
+        return savedProfiles().firstOrNull { it.id == currentId } ?: legacyCurrentProfile()
+    }
 
     fun switchToProfile(profileId: String): Boolean {
         val profile = loadSavedProfiles().firstOrNull { it.id == profileId } ?: return false
@@ -109,9 +124,15 @@ class RelaySettingsStore(context: Context) {
         connectionType: ConnectionType,
         config: RelayClientConfig,
         mode: RelayModeOption,
+        profileDisplayName: String? = null,
     ) {
         val normalizedBaseUrl = normalizeBaseUrl(relayBaseUrl)
         val cachedConfigJson = configToJson(config).toString()
+        val profileId = buildProfileId(normalizedBaseUrl)
+        val displayName = profileDisplayName
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: deriveProfileDisplayName(normalizedBaseUrl, config.serviceName)
         prefs.edit()
             .putString(KEY_RELAY_BASE_URL, normalizedBaseUrl)
             .putString(KEY_RELAY_AUTH_TOKEN, relayAuthToken.trim())
@@ -123,12 +144,12 @@ class RelaySettingsStore(context: Context) {
             .putString(KEY_LAST_SERVICE_VERSION, config.serviceVersion)
             .putString(KEY_CACHED_CONFIG_BASE_URL, normalizedBaseUrl)
             .putString(KEY_CACHED_CONFIG_JSON, cachedConfigJson)
-            .putString(KEY_CURRENT_PROFILE_ID, buildProfileId(normalizedBaseUrl))
+            .putString(KEY_CURRENT_PROFILE_ID, profileId)
             .apply()
         upsertProfile(
             RelayServiceProfile(
-                id = buildProfileId(normalizedBaseUrl),
-                displayName = deriveProfileDisplayName(normalizedBaseUrl, config.serviceName),
+                id = profileId,
+                displayName = displayName,
                 relayBaseUrl = normalizedBaseUrl,
                 relayAuthToken = relayAuthToken.trim(),
                 connectionType = connectionType,
@@ -412,6 +433,10 @@ class RelaySettingsStore(context: Context) {
         private const val KEY_CACHED_CONFIG_JSON = "cached_config_json"
         private const val KEY_SAVED_PROFILES_JSON = "saved_profiles_json"
         private const val KEY_CURRENT_PROFILE_ID = "current_profile_id"
+        private const val KEY_RECENT_TASK_LIMIT = "recent_task_limit"
+
+        const val DEFAULT_RECENT_TASK_LIMIT = 20
+        val RECENT_TASK_LIMIT_OPTIONS = setOf(5, 10, 20, 0)
 
         fun normalizeBaseUrl(value: String): String =
             value.trim().trimEnd('/')

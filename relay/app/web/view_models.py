@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 import ipaddress
 from pathlib import Path
+import shutil
 import socket
+import subprocess
 from typing import Iterable
 from urllib.parse import urlparse
 
@@ -557,6 +559,37 @@ def _detect_host_ipv4_addresses() -> list[str]:
             candidates.add(probe.getsockname()[0])
     except OSError:
         pass
+    candidates.update(_detect_tailscale_ipv4_addresses())
+    return sorted(candidates)
+
+
+def _detect_tailscale_ipv4_addresses() -> list[str]:
+    candidates: set[str] = set()
+    command_candidates: list[list[str]] = []
+    tailscale_path = shutil.which("tailscale") or shutil.which("tailscale.exe")
+    if tailscale_path:
+        command_candidates.append([tailscale_path, "ip", "-4"])
+    windows_default = Path(r"C:\Program Files\Tailscale\tailscale.exe")
+    if windows_default.exists():
+        command_candidates.append([str(windows_default), "ip", "-4"])
+
+    for command in command_candidates:
+        try:
+            completed = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if completed.returncode != 0:
+            continue
+        for line in completed.stdout.splitlines():
+            address = line.strip()
+            if _classify_ipv4_address(address) == "private_network":
+                candidates.add(address)
     return sorted(candidates)
 
 
@@ -574,11 +607,19 @@ def build_connection_hints(host: str, port: int, public_url: str = "") -> dict[s
             lan_addresses.insert(0, host)
         elif host_type == "private_network" and host not in private_addresses:
             private_addresses.insert(0, host)
-    bind_host = "<your-computer-ip>" if host in {"0.0.0.0", "::"} else host
+    bind_urls = _format_urls(private_addresses + lan_addresses, port)
+    if host in {"127.0.0.1", "localhost", "::1"}:
+        bind_urls = [f"http://127.0.0.1:{port}"]
+    elif host not in {"0.0.0.0", "::"} and host not in {"127.0.0.1", "localhost", "::1"}:
+        bind_urls = [f"http://{host}:{port}"] + [url for url in bind_urls if url != f"http://{host}:{port}"]
+    bind_copy = bind_urls[0] if bind_urls else f"http://127.0.0.1:{port}"
     return {
         "local": f"http://127.0.0.1:{port}",
         "android_emulator": f"http://10.0.2.2:{port}",
-        "bind": f"http://{bind_host}:{port}",
+        "bind": f"{host}:{port}",
+        "bind_display": bind_copy,
+        "bind_urls": bind_urls,
+        "bind_copy": bind_copy,
         "lan": _format_urls(lan_addresses, port),
         "private": _format_urls(private_addresses, port),
         "public": public_url.strip(),

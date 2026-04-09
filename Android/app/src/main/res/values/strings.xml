@@ -32,7 +32,9 @@
     <string name="main_mode_not_set_hint">Test the connection in Settings first, then choose a mode.</string>
     <string name="main_mode_saved_hint">You can change the default mode in Settings.</string>
     <string name="main_recent_label">Recent Tasks</string>
-    <string name="main_recent_hint">Only the latest 20 tasks are kept.</string>
+    <string name="main_recent_hint">Recent tasks are shown here.</string>
+    <string name="main_recent_hint_limited">Showing the latest %1$d tasks.</string>
+    <string name="main_recent_hint_all">Showing all saved recent tasks on this phone.</string>
     <string name="main_no_tasks_hint">Share something to UniPATH and recent tasks will appear here.</string>
     <string name="main_relay_connection_ready_hint">The last connection test succeeded. You can change this address in Settings.</string>
     <string name="recent_target_unknown">Shared Link</string>
@@ -64,6 +66,7 @@
     <string name="action_view_full_flow">View Full Flow</string>
     <string name="action_view_full_response">View Full Response</string>
     <string name="action_manage">Manage</string>
+    <string name="action_services">Services</string>
     <string name="action_choose">Choose</string>
     <string name="action_use">Use</string>
     <string name="action_delete">Delete</string>
@@ -92,6 +95,8 @@
     <string name="stage_cancelling">Cancelling</string>
 
     <string name="settings_service_label">Forwarding Service Address</string>
+    <string name="settings_service_profile_name_label">Saved Service Name</string>
+    <string name="settings_service_profile_name_placeholder">Home Relay</string>
     <string name="settings_service_placeholder">http://192.168.1.12:8080</string>
     <string name="settings_service_hint">Use the service base URL, for example http://192.168.1.12:8080 .</string>
     <string name="settings_service_placeholder_emulator">http://10.0.2.2:8080</string>
@@ -107,6 +112,10 @@
     <string name="settings_service_auth_hint_private">Private-network relay access usually requires the same AUTH_TOKEN that your forwarding service is using. Paste it here before testing the connection.</string>
     <string name="settings_service_auth_hint_private_ready">This private-network relay will use the saved forwarding service token. Test the connection again after changing either the address or token.</string>
     <string name="settings_show_auth_optional">Use auth token (optional)</string>
+    <string name="settings_show_auth_saved">Show saved auth token</string>
+    <string name="settings_hide_auth_optional">Hide auth token</string>
+    <string name="settings_service_profile_status_unsaved">This service is not clearly saved on this phone yet. Save once to make it appear under Services on the home screen.</string>
+    <string name="settings_service_profile_status_saved">Saved on this phone as %1$s. You can switch or delete it from Services on the home screen.</string>
     <string name="settings_service_hint_bind_note">0.0.0.0 is only a relay bind address. Enter a real emulator, LAN, or private-network address here instead.</string>
     <string name="settings_service_hint_loopback_note">localhost and 127.0.0.1 only work on the same device. For Android use 10.0.2.2, a LAN IP, or a private-network address.</string>
     <string name="settings_service_hint_private_with_lan">This still looks like a LAN address. For different networks, switch to a Tailscale, ZeroTier, or other private relay address.</string>
@@ -124,11 +133,18 @@
     <string name="settings_invalid_bind_address">0.0.0.0 is only for the relay bind address. Enter a real relay address instead.</string>
     <string name="settings_invalid_loopback_address">localhost and 127.0.0.1 only work on the same device. Use 10.0.2.2 for the emulator, or your computer\'s LAN/private relay address on a phone.</string>
     <string name="settings_save_done">Settings saved.</string>
+    <string name="settings_save_done_named">Saved as %1$s.</string>
     <string name="settings_reset_done">Default settings restored.</string>
     <string name="settings_fetch_failed">Failed to fetch the mode list.</string>
     <string name="settings_service_ready">Connection is ready and the mode list has been loaded.</string>
     <string name="settings_language_label">App Language</string>
     <string name="settings_language_hint">Choose the language used in the app. Tap Save to apply it.</string>
+    <string name="settings_recent_tasks_label">Recent Tasks</string>
+    <string name="settings_recent_tasks_hint">Choose how many recent tasks the home screen should show. Unlimited keeps the full saved list, but may render more slowly on older devices.</string>
+    <string name="settings_recent_tasks_dialog_title">Show recent tasks</string>
+    <string name="settings_recent_tasks_option_number">%1$d tasks</string>
+    <string name="settings_recent_tasks_option_all">All</string>
+    <string name="settings_recent_tasks_value">Show %1$s</string>
     <string name="language_english">English</string>
     <string name="language_simplified_chinese">Simplified Chinese</string>
 

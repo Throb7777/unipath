@@ -29,6 +29,7 @@ These names match the UI:
 
 Important buttons:
 
+- `Services`
 - `Test Connection`
 - `Save`
 - `Cancel Task`
@@ -89,6 +90,14 @@ After the app opens, do this in order.
 
 In the app, tap **Settings**.
 
+### Service profiles
+
+The app can keep more than one saved Forwarding Service on the same phone.
+
+- Give the current service a clear name such as `Home Relay` or `Private Relay`
+- Tap **Save** to save or update the current service profile
+- On the **Home** screen, use **Services** to switch or delete saved services
+
 ### Step 2. Enter the Forwarding Service URL
 
 Fill in the Forwarding Service base URL.
@@ -116,6 +125,12 @@ After the connection test succeeds, choose a Processing Mode.
 ### Step 5. Tap `Save`
 
 This stores the settings locally in the app.
+
+Additional notes:
+
+- On **Private Network**, the auth token field is shown directly
+- On **Local Network**, the auth token field stays collapsed by default and can be expanded only when needed
+- The mode list now focuses on mode names; the selected mode description is shown separately below the list
 
 ## 🌐 Use UniPATH on Different Networks
 
@@ -197,6 +212,8 @@ This helper will:
 Use it to:
 
 - see current Forwarding Service settings
+- switch saved services from **Services**
+- switch the current Processing Mode quickly
 - see `Recent Tasks`
 - reopen a task quickly
 
@@ -205,8 +222,11 @@ Use it to:
 Use it to:
 
 - change the Forwarding Service URL
+- name and save the current service profile
 - tap `Test Connection`
 - choose a Processing Mode
+- expand or hide the auth token field when needed
+- change how many recent tasks the Home screen shows
 - change the app language
 - tap `Save`
 
